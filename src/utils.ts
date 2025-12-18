@@ -174,3 +174,28 @@ export function formatRepoName(source: string): string {
   }
   return source;
 }
+
+export function formatSessionState(state: SessionState): string {
+  switch (state) {
+    case SessionState.STATE_UNSPECIFIED:
+      return "Unspecified";
+    case SessionState.QUEUED:
+      return "Queued";
+    case SessionState.PLANNING:
+      return "Planning";
+    case SessionState.AWAITING_PLAN_APPROVAL:
+      return "Awaiting Plan Approval";
+    case SessionState.AWAITING_USER_FEEDBACK:
+      return "Awaiting User Feedback";
+    case SessionState.IN_PROGRESS:
+      return "In Progress";
+    case SessionState.PAUSED:
+      return "Paused";
+    case SessionState.FAILED:
+      return "Failed";
+    case SessionState.COMPLETED:
+      return "Completed";
+    default:
+      return state;
+  }
+}

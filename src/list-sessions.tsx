@@ -16,7 +16,7 @@ import { FormValidation, showFailureToast, useCachedState, useForm } from "@rayc
 import { format } from "date-fns";
 import { approvePlan, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Session, SessionState } from "./types";
-import { formatRepoName, getSessionAccessories, getStatusIconForSession, groupSessions } from "./utils";
+import { formatRepoName, formatSessionState, getSessionAccessories, getStatusIconForSession, groupSessions } from "./utils";
 
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
@@ -125,7 +125,7 @@ function SessionDetail(props: { session: Session }) {
       metadata={
         <List.Item.Detail.Metadata>
           {session.title && <List.Item.Detail.Metadata.Label title="Title" text={session.title} />}
-          <List.Item.Detail.Metadata.Label title="State" text={session.state} />
+          <List.Item.Detail.Metadata.Label title="State" text={formatSessionState(session.state)} />
           <List.Item.Detail.Metadata.Separator />
           {prUrl && (
             <>
@@ -317,7 +317,7 @@ export default function Command() {
           <List.Dropdown.Item title="All Sessions" value="all:all" />
           <List.Dropdown.Section title="Status">
             {Object.values(SessionState).map((state) => (
-              <List.Dropdown.Item key={state} title={state} value={`status:${state}`} />
+              <List.Dropdown.Item key={state} title={formatSessionState(state)} value={`status:${state}`} />
             ))}
           </List.Dropdown.Section>
           <List.Dropdown.Section title="Repository">
