@@ -53,6 +53,24 @@
       "type": "password",
       "placeholder": "key_...",
       "required": true
+    },
+    {
+      "name": "requirePlanApproval",
+      "title": "Launch Options",
+      "label": "Require plan approval",
+      "description": "Whether Jules should require plan approval by default",
+      "type": "checkbox",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "autoCreatePR",
+      "title": "",
+      "label": "Automatically create a PR",
+      "description": "Whether Jules should automatically create a PR by default",
+      "type": "checkbox",
+      "default": true,
+      "required": false
     }
   ],
   "dependencies": {

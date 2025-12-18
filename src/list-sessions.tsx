@@ -16,7 +16,13 @@ import { FormValidation, showFailureToast, useCachedState, useForm } from "@rayc
 import { format } from "date-fns";
 import { approvePlan, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Session, SessionState } from "./types";
-import { formatRepoName, formatSessionState, getSessionAccessories, getStatusIconForSession, groupSessions } from "./utils";
+import {
+  formatRepoName,
+  formatSessionState,
+  getSessionAccessories,
+  getStatusIconForSession,
+  groupSessions,
+} from "./utils";
 
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
@@ -283,7 +289,7 @@ export default function Command() {
   });
 
   const { today, yesterday, thisWeek, thisMonth, older } = groupSessions(filteredData);
-  
+
   let dropdownValue = "all:all";
   if (filterStatus !== "all") {
     dropdownValue = `status:${filterStatus}`;

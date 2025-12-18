@@ -1,8 +1,8 @@
-import { Action, ActionPanel, Form, open, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, Form, getPreferenceValues, open, showToast, Toast } from "@raycast/api";
 import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
 import { SourceDropdown } from "./components/SourceDropdown";
 import { createSession } from "./jules";
-import { AutomationMode } from "./types";
+import { AutomationMode, Preferences } from "./types";
 import { refreshMenuBar } from "./utils";
 
 type Values = {
@@ -14,14 +14,16 @@ type Values = {
 };
 
 export default function Command() {
+  const preferences = getPreferenceValues<Preferences>();
+
   const { reset, focus, handleSubmit, itemProps } = useForm<Values>({
     validation: {
       prompt: FormValidation.Required,
       sourceId: FormValidation.Required,
     },
     initialValues: {
-      requirePlanApproval: true,
-      autoCreatePR: true,
+      requirePlanApproval: preferences.requirePlanApproval,
+      autoCreatePR: preferences.autoCreatePR,
     },
     onSubmit: async (values) => {
       const toast = await showToast({ style: Toast.Style.Animated, title: "Launching Jules Session" });

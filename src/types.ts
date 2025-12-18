@@ -168,3 +168,9 @@ export interface ListSourcesResponse {
   sources: Source[];
   nextPageToken?: string;
 }
+
+export interface Preferences {
+  julesApiKey: string;
+  requirePlanApproval: boolean;
+  autoCreatePR: boolean;
+}
