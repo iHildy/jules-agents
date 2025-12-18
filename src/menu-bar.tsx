@@ -1,19 +1,19 @@
 import {
-  Clipboard,
-  Color,
-  Icon,
-  launchCommand,
-  LaunchType,
-  MenuBarExtra,
-  open,
-  openCommandPreferences,
-  showHUD,
+    Clipboard,
+    Color,
+    Icon,
+    launchCommand,
+    LaunchType,
+    MenuBarExtra,
+    open,
+    openCommandPreferences,
+    showHUD,
 } from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
 import { useSessions } from "./jules";
 import { useSessionNotifications } from "./notification";
 import { Session } from "./types";
-import { formatPrSubtitle, formatPrTitle, getStatusIconSimpleForSession, groupSessions } from "./utils";
+import { formatPrSubtitle, formatPrTitle, formatRepoName, getStatusIconSimpleForSession, groupSessions } from "./utils";
 
 function AlternateSessionMenuBarItem({ session }: { session: Session }) {
   const prUrl = session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
@@ -44,11 +44,15 @@ function AlternateSessionMenuBarItem({ session }: { session: Session }) {
 }
 
 function SessionMenuBarItem({ session }: { session: Session }) {
+  const rawTitle = session.title || session.id;
+  const title = rawTitle.length > 50 ? rawTitle.substring(0, 50) + "..." : rawTitle;
+
   return (
     <MenuBarExtra.Item
       key={session.id}
       icon={getStatusIconSimpleForSession(session)}
-      title={session.title || session.id}
+      title={title}
+      subtitle={formatRepoName(session.sourceContext.source)}
       tooltip={session.prompt}
       alternate={<AlternateSessionMenuBarItem session={session} />}
       onAction={async (event) => {

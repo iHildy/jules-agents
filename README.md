@@ -1,6 +1,6 @@
 ![Google Jules](./media/jules.jpg)
 
-Manage and monitor your Google Jules async sessions directly from Raycast.
+Manage and monitor your Google Jules sessions directly from Raycast.
 
 ## Features
 

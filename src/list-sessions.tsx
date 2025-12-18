@@ -16,7 +16,7 @@ import { FormValidation, showFailureToast, useCachedState, useForm } from "@rayc
 import { format } from "date-fns";
 import { approvePlan, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Session, SessionState } from "./types";
-import { getSessionAccessories, getStatusIconForSession, groupSessions } from "./utils";
+import { formatRepoName, getSessionAccessories, getStatusIconForSession, groupSessions } from "./utils";
 
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
@@ -134,7 +134,7 @@ function SessionDetail(props: { session: Session }) {
               <List.Item.Detail.Metadata.Separator />
             </>
           )}
-          <List.Item.Detail.Metadata.Label title="Repository" text={session.sourceContext.source} />
+          <List.Item.Detail.Metadata.Label title="Repository" text={formatRepoName(session.sourceContext.source)} />
           <List.Item.Detail.Metadata.Separator />
           <List.Item.Detail.Metadata.Label
             title="Created"
@@ -154,11 +154,15 @@ function SessionListItem(props: {
 }) {
   const prUrl = props.session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
 
+  const rawTitle = props.session.title || props.session.id;
+  const title = rawTitle.length > 75 ? rawTitle.substring(0, 75) + "..." : rawTitle;
+
   return (
     <List.Item
       id={props.session.id}
       key={props.session.id}
-      title={props.session.title || props.session.id}
+      title={title}
+      subtitle={formatRepoName(props.session.sourceContext.source)}
       icon={getStatusIconForSession(props.session)}
       accessories={getSessionAccessories(props.session, {
         hideCreateTime: props.isShowingDetail,

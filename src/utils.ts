@@ -167,3 +167,10 @@ export async function refreshMenuBar(): Promise<void> {
     // Silently ignoring that the menu bar is not running
   }
 }
+
+export function formatRepoName(source: string): string {
+  if (source.startsWith("sources/github/")) {
+    return source.replace("sources/github/", "");
+  }
+  return source;
+}
