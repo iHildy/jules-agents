@@ -1,13 +1,13 @@
 import {
-    Clipboard,
-    Color,
-    Icon,
-    launchCommand,
-    LaunchType,
-    MenuBarExtra,
-    open,
-    openCommandPreferences,
-    showHUD,
+  Clipboard,
+  Color,
+  Icon,
+  launchCommand,
+  LaunchType,
+  MenuBarExtra,
+  open,
+  openCommandPreferences,
+  showHUD,
 } from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
 import { useSessions } from "./jules";

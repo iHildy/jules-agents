@@ -125,7 +125,6 @@ function SessionDetail(props: { session: Session }) {
       metadata={
         <List.Item.Detail.Metadata>
           {session.title && <List.Item.Detail.Metadata.Label title="Title" text={session.title} />}
-          <List.Item.Detail.Metadata.Label title="ID" text={session.id} />
           <List.Item.Detail.Metadata.Label title="State" text={session.state} />
           <List.Item.Detail.Metadata.Separator />
           {prUrl && (
@@ -140,6 +139,8 @@ function SessionDetail(props: { session: Session }) {
             title="Created"
             text={format(new Date(session.createTime), "EEEE d MMMM yyyy 'at' HH:mm")}
           />
+          <List.Item.Detail.Metadata.Separator />
+          <List.Item.Detail.Metadata.Label title="ID" text={session.id} />
         </List.Item.Detail.Metadata>
       }
     />
@@ -162,7 +163,7 @@ function SessionListItem(props: {
       id={props.session.id}
       key={props.session.id}
       title={title}
-      subtitle={formatRepoName(props.session.sourceContext.source)}
+      subtitle={props.isShowingDetail ? undefined : formatRepoName(props.session.sourceContext.source)}
       icon={getStatusIconForSession(props.session)}
       accessories={getSessionAccessories(props.session, {
         hideCreateTime: props.isShowingDetail,
@@ -270,14 +271,62 @@ function SessionListItem(props: {
 export default function Command() {
   const { data, isLoading, pagination, mutate } = useSessions();
   const [isShowingDetail, setIsShowingDetail] = useCachedState("isShowingDetail", false);
+  const [filterStatus, setFilterStatus] = useCachedState("filterStatus", "all");
+  const [filterRepo, setFilterRepo] = useCachedState("filterRepo", "all");
 
-  const { today, yesterday, thisWeek, thisMonth, older } = groupSessions(data);
+  const repositories = Array.from(new Set(data?.map((s) => formatRepoName(s.sourceContext.source)) || [])).sort();
+
+  const filteredData = data?.filter((session) => {
+    if (filterStatus !== "all" && session.state !== filterStatus) return false;
+    if (filterRepo !== "all" && formatRepoName(session.sourceContext.source) !== filterRepo) return false;
+    return true;
+  });
+
+  const { today, yesterday, thisWeek, thisMonth, older } = groupSessions(filteredData);
+  
+  let dropdownValue = "all:all";
+  if (filterStatus !== "all") {
+    dropdownValue = `status:${filterStatus}`;
+  } else if (filterRepo !== "all") {
+    dropdownValue = `repo:${filterRepo}`;
+  }
 
   return (
     <List
       isLoading={isLoading}
       pagination={pagination}
       isShowingDetail={isShowingDetail}
+      searchBarAccessory={
+        <List.Dropdown
+          tooltip="Filter Sessions"
+          value={dropdownValue}
+          onChange={(newValue) => {
+            const [type, value] = newValue.split(":");
+            if (type === "status") {
+              setFilterStatus(value);
+              setFilterRepo("all");
+            } else if (type === "repo") {
+              setFilterRepo(value);
+              setFilterStatus("all");
+            } else {
+              setFilterStatus("all");
+              setFilterRepo("all");
+            }
+          }}
+        >
+          <List.Dropdown.Item title="All Sessions" value="all:all" />
+          <List.Dropdown.Section title="Status">
+            {Object.values(SessionState).map((state) => (
+              <List.Dropdown.Item key={state} title={state} value={`status:${state}`} />
+            ))}
+          </List.Dropdown.Section>
+          <List.Dropdown.Section title="Repository">
+            {repositories.map((repo) => (
+              <List.Dropdown.Item key={repo} title={repo} value={`repo:${repo}`} />
+            ))}
+          </List.Dropdown.Section>
+        </List.Dropdown>
+      }
       actions={
         <ActionPanel>
           <Action
