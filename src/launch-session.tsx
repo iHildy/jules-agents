@@ -87,9 +87,8 @@ export default function Command() {
             onAction={async () => {
               if (itemProps.prompt.value) {
                 try {
-                  const improvedPrompt = await AI.improvePrompt(
-                    itemProps.prompt.value,
-                    "Refine the user's instruction for a helpful AI software engineer named Jules.",
+                  const improvedPrompt = await AI.ask(
+                    `Refine the following instruction for a helpful AI software engineer named Jules. Return only the refined instruction, nothing else:\n\n${itemProps.prompt.value}`,
                   );
                   setValue("prompt", improvedPrompt);
                 } catch (e) {

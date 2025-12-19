@@ -1,8 +1,9 @@
 import {
-  AI,
   Action,
   ActionPanel,
+  AI,
   Color,
+  Detail,
   Form,
   Icon,
   Keyboard,
@@ -139,7 +140,7 @@ function getActivityTitle(activity: Activity): string {
   return activity.description || "Activity";
 }
 
-function getActivityMarkdown(activity: Activity): string {
+function getActivityMarkdown(activity: Activity, options: { includeFullArtifacts?: boolean } = { includeFullArtifacts: true }): string {
   let content = "";
   if (activity.userMessaged) content = activity.userMessaged.userMessage;
   else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage;
@@ -163,15 +164,27 @@ function getActivityMarkdown(activity: Activity): string {
       if (artifact.changeSet) {
         content += `\n**Change Set**: ${artifact.changeSet.source}\n`;
         if (artifact.changeSet.gitPatch) {
-          content += "\n```diff\n" + artifact.changeSet.gitPatch.unidiffPatch + "\n```\n";
+          if (options.includeFullArtifacts) {
+            content += "\n```diff\n" + artifact.changeSet.gitPatch.unidiffPatch + "\n```\n";
+          } else {
+            content += "\n_Git patch omitted_\n";
+          }
         }
       }
       if (artifact.media) {
-        content += `\n![Media](data:${artifact.media.mimeType};base64,${artifact.media.data})\n`;
+        if (options.includeFullArtifacts) {
+          content += `\n![Media](data:${artifact.media.mimeType};base64,${artifact.media.data})\n`;
+        } else {
+          content += `\n_Media artifact (${artifact.media.mimeType}) omitted_\n`;
+        }
       }
       if (artifact.bashOutput) {
         content += `\n**Command**: \`${artifact.bashOutput.command}\`\n`;
-        content += "\n```\n" + artifact.bashOutput.output + "\n```\n";
+        if (options.includeFullArtifacts) {
+          content += "\n```\n" + artifact.bashOutput.output + "\n```\n";
+        } else {
+          content += "\n_Command output omitted_\n";
+        }
       }
     });
   }
@@ -385,12 +398,29 @@ function SessionListItem(props: {
                 try {
                   const activities = await fetchSessionActivities(props.session.name);
                   if (activities.length > 0) {
-                    const content = activities.map((a) => getActivityMarkdown(a)).join("\n\n---\n\n");
-                    const summary = await AI.summarize(content);
+                    const content = activities
+                      .map((a) => getActivityMarkdown(a, { includeFullArtifacts: false }))
+                      .join("\n\n---\n\n");
+
+                    // Raycast AI has a character limit. If it's still too long, we truncate from the beginning
+                    // since the most recent activities (at the end) are usually more important for a summary.
+                    const MAX_CHARS = 25000;
+                    const truncatedContent =
+                      content.length > MAX_CHARS ? "... (older activities truncated)\n\n" + content.slice(-MAX_CHARS) : content;
+
+                    const summary = await AI.ask(
+                      `Summarize the following session activities of a Jules Agent session. Be concise and highlight the main progress and any issues:\n\n${truncatedContent}`,
+                    );
                     push(
-                      <List>
-                        <List.Item title="Summary" detail={<List.Item.Detail markdown={summary} />} />
-                      </List>,
+                      <Detail
+                        navigationTitle="Session Summary"
+                        markdown={summary}
+                        actions={
+                          <ActionPanel>
+                            <Action.CopyToClipboard title="Copy Summary" content={summary} />
+                          </ActionPanel>
+                        }
+                      />,
                     );
                     toast.style = Toast.Style.Success;
                     toast.title = "Session summarized";
