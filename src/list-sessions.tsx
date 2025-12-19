@@ -189,14 +189,14 @@ function PlanDetailView(props: { plan: Plan }) {
       {plan.steps.map((step) => (
         <List.Item
           key={step.id}
-          title={`Step ${step.index + 1}: ${step.title}`}
-          accessories={[{ text: `#${step.index + 1}` }]}
+          title={step.title}
+          accessories={[{ text: `#${(step.index ?? 0) + 1}` }]}
           detail={
             <List.Item.Detail
               markdown={`## ${step.title}\n\n${step.description || "_No description_"}`}
               metadata={
                 <List.Item.Detail.Metadata>
-                  <List.Item.Detail.Metadata.Label title="Step" text={`${step.index + 1} of ${plan.steps.length}`} />
+                  <List.Item.Detail.Metadata.Label title="Step" text={`${(step.index ?? 0) + 1} of ${plan.steps.length}`} />
                   <List.Item.Detail.Metadata.Label title="ID" text={step.id} />
                 </List.Item.Detail.Metadata>
               }
@@ -277,24 +277,27 @@ function SessionListItem(props: {
       detail={<SessionDetail session={props.session} />}
       actions={
         <ActionPanel>
-          <ActionPanel.Section>
-            <Action.OpenInBrowser url={props.session.url} title="Open in Browser" />
-            {prUrl && (
-              <Action.OpenInBrowser
-                icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
-                title="Open Pull Request"
-                url={prUrl}
-                shortcut={
-                  {
-                    macOS: { modifiers: ["cmd", "shift"], key: "return" },
-                    windows: { modifiers: ["ctrl", "shift"], key: "return" },
-                  } as Keyboard.Shortcut
-                }
-              />
-            )}
-          </ActionPanel.Section>
           {props.session.state === SessionState.AWAITING_PLAN_APPROVAL && (
             <ActionPanel.Section>
+              <Action
+                title="View Plan"
+                icon={Icon.List}
+                onAction={async () => {
+                  try {
+                    await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
+                    const activities = await fetchSessionActivities(props.session.name);
+                    // Find the latest PlanGenerated activity
+                    const planActivity = [...activities].reverse().find((a) => a.planGenerated);
+                    if (planActivity?.planGenerated) {
+                      push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
+                    } else {
+                      await showToast({ style: Toast.Style.Failure, title: "No plan found" });
+                    }
+                  } catch (e) {
+                    await showFailureToast(e, { title: "Failed to load plan" });
+                  }
+                }}
+              />
               <Action
                 title="Approve Plan"
                 icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
@@ -314,28 +317,24 @@ function SessionListItem(props: {
                 icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
                 target={<DeclinePlanForm session={props.session} mutate={props.mutate} />}
               />
-              <Action
-                title="View Plan"
-                icon={Icon.List}
-                shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
-                onAction={async () => {
-                  try {
-                    await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
-                    const activities = await fetchSessionActivities(props.session.name);
-                    // Find the latest PlanGenerated activity
-                    const planActivity = [...activities].reverse().find((a) => a.planGenerated);
-                    if (planActivity?.planGenerated) {
-                      push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
-                    } else {
-                      await showToast({ style: Toast.Style.Failure, title: "No plan found" });
-                    }
-                  } catch (e) {
-                    await showFailureToast(e, { title: "Failed to load plan" });
-                  }
-                }}
-              />
             </ActionPanel.Section>
           )}
+          <ActionPanel.Section>
+            <Action.OpenInBrowser url={props.session.url} title="Open in Browser" />
+            {prUrl && (
+              <Action.OpenInBrowser
+                icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
+                title="Open Pull Request"
+                url={prUrl}
+                shortcut={
+                  {
+                    macOS: { modifiers: ["cmd", "shift"], key: "return" },
+                    windows: { modifiers: ["ctrl", "shift"], key: "return" },
+                  } as Keyboard.Shortcut
+                }
+              />
+            )}
+          </ActionPanel.Section>
           <ActionPanel.Section title="Edit">
             <Action
               title="Launch Session"
