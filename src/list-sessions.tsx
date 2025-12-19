@@ -1,31 +1,32 @@
 import {
-  Action,
-  ActionPanel,
-  AI,
-  Color,
-  Detail,
-  Form,
-  Icon,
-  Keyboard,
-  launchCommand,
-  LaunchType,
-  List,
-  showToast,
-  Toast,
-  useNavigation,
-  getPreferenceValues,
+    Action,
+    ActionPanel,
+    AI,
+    Color,
+    Detail,
+    Form,
+    getPreferenceValues,
+    Icon,
+    Keyboard,
+    launchCommand,
+    LaunchType,
+    List,
+    showToast,
+    Toast,
+    useNavigation,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
+import { useState } from "react";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
-import { Activity, Plan, Session, SessionState } from "./types";
+import { Activity, Plan, Preferences, Session, SessionState } from "./types";
 import {
-  formatRepoName,
-  formatSessionState,
-  formatSessionTitle,
-  getSessionAccessories,
-  getStatusIconForSession,
-  groupSessions,
+    formatRepoName,
+    formatSessionState,
+    formatSessionTitle,
+    getSessionAccessories,
+    getStatusIconForSession,
+    groupSessions,
 } from "./utils";
 
 function FollowupInstruction(props: { session: Session }) {
@@ -124,8 +125,8 @@ function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> 
 
 function SessionConversation(props: { session: Session; mutate: () => Promise<void> }) {
   const { data, isLoading } = useSessionActivities(props.session.name);
-  const { defaultActivityFilter } = getPreferenceValues();
-  const [filter, setFilter] = useCachedState("activityFilter", defaultActivityFilter);
+  const { defaultActivityFilter } = getPreferenceValues<Preferences>();
+  const [filter, setFilter] = useState(defaultActivityFilter);
 
   const filteredData = data?.filter((activity) => {
     if (filter === "messages") {
@@ -149,9 +150,9 @@ function SessionConversation(props: { session: Session; mutate: () => Promise<vo
         <List.Dropdown tooltip="Filter Activities" value={filter} onChange={setFilter}>
           <List.Dropdown.Item title="All Activities" value="all" />
           <List.Dropdown.Section>
-            <List.Dropdown.Item title="Messages Only" value="messages" />
-            <List.Dropdown.Item title="Artifacts Only" value="artifacts" />
-            <List.Dropdown.Item title="Hide Progress Updates" value="hide-progress" />
+            <List.Dropdown.Item title="Conversation Only" value="messages" />
+            <List.Dropdown.Item title="Results & Files Only" value="artifacts" />
+            <List.Dropdown.Item title="Milestones Only" value="hide-progress" />
           </List.Dropdown.Section>
         </List.Dropdown>
       }

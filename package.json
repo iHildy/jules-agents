@@ -96,15 +96,15 @@
           "value": "all"
         },
         {
-          "title": "Messages Only",
+          "title": "Conversation Only",
           "value": "messages"
         },
         {
-          "title": "Artifacts Only",
+          "title": "Results & Files Only",
           "value": "artifacts"
         },
         {
-          "title": "Hide Progress Updates",
+          "title": "Milestones Only",
           "value": "hide-progress"
         }
       ],
