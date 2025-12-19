@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
+  formatBashOutputMarkdown,
   formatRepoName,
   formatSessionState,
   formatSessionTitle,
@@ -240,12 +241,9 @@ function getActivityMarkdown(
         }
       }
       if (artifact.bashOutput) {
-        content += `\n**Command**: \`${artifact.bashOutput.command}\`\n`;
-        if (options.includeFullArtifacts) {
-          content += "\n```\n" + artifact.bashOutput.output + "\n```\n";
-        } else {
-          content += "\n_Command output omitted_\n";
-        }
+        content += formatBashOutputMarkdown(artifact.bashOutput, {
+          includeFullOutput: options.includeFullArtifacts,
+        });
       }
     });
   }

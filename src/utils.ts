@@ -1,6 +1,6 @@
 import { Color, Icon, launchCommand, LaunchType, List } from "@raycast/api";
 import { addDays, format, isToday, isYesterday, startOfToday } from "date-fns";
-import { Session, SessionState } from "./types";
+import { BashOutput, Session, SessionState } from "./types";
 
 export function getStatusIconForSession(session: Session) {
   let icon: List.Item.Props["icon"];
@@ -203,4 +203,26 @@ export function formatSessionState(state: SessionState): string {
 export function formatSessionTitle(session: Session, maxLength = 50): string {
   const rawTitle = (session.title || session.id).split("\n")[0].trim();
   return rawTitle.length > maxLength ? rawTitle.substring(0, maxLength) + "..." : rawTitle;
+}
+
+export function formatBashOutputMarkdown(
+  bashOutput: BashOutput,
+  options: { includeFullOutput?: boolean } = { includeFullOutput: true },
+): string {
+  const exitCodeColor = bashOutput.exitCode === 0 ? Color.Green : Color.Red;
+  let markdown = `
+**Command**: \`${bashOutput.command}\`
+
+**Exit Code**: <font color="${exitCodeColor}">${bashOutput.exitCode}</font>
+`;
+
+  if (options.includeFullOutput) {
+    markdown += `
+~~~bash
+${bashOutput.output}
+~~~
+`;
+  }
+
+  return markdown;
 }
