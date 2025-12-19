@@ -15,6 +15,7 @@ import {
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
+import { ChangeSetDetailView } from "./components/ChangeSetDetailView";
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
   formatRepoName,
@@ -121,32 +122,57 @@ function SessionConversation(props: { session: Session }) {
       }
     >
       <List.EmptyView title="No Activity Yet" description="This session hasn't started yet" icon={Icon.SpeechBubble} />
-      {filteredData?.map((activity) => (
-        <List.Item
-          key={activity.id}
-          title={getActivityTitle(activity)}
-          subtitle={format(new Date(activity.createTime), "HH:mm")}
-          detail={<List.Item.Detail markdown={getActivityMarkdown(activity)} />}
-          actions={
-            activity.planGenerated ? (
-              <ActionPanel>
-                <Action.Push
-                  title="View Plan"
-                  icon={Icon.List}
-                  target={<PlanDetailView plan={activity.planGenerated.plan} />}
-                />
-                <Action.CopyToClipboard
-                  title="Copy Plan as Markdown"
-                  content={activity.planGenerated.plan.steps
-                    .map((s, i) => `${i + 1}. **${s.title}**\n   ${s.description || ""}`)
-                    .join("\n\n")}
-                  shortcut={Keyboard.Shortcut.Common.Copy}
-                />
-              </ActionPanel>
-            ) : undefined
-          }
-        />
-      ))}
+      {filteredData?.map((activity) => {
+        const planGenerated = activity.planGenerated;
+        const changeSetArtifacts = activity.artifacts?.filter((a) => a.changeSet) || [];
+        const hasActions = planGenerated || changeSetArtifacts.length > 0;
+
+        return (
+          <List.Item
+            key={activity.id}
+            title={getActivityTitle(activity)}
+            subtitle={format(new Date(activity.createTime), "HH:mm")}
+            detail={<List.Item.Detail markdown={getActivityMarkdown(activity)} />}
+            actions={
+              hasActions ? (
+                <ActionPanel>
+                  {planGenerated && (
+                    <ActionPanel.Section title="Plan">
+                      <Action.Push
+                        title="View Plan"
+                        icon={Icon.List}
+                        target={<PlanDetailView plan={planGenerated.plan} />}
+                      />
+                      <Action.CopyToClipboard
+                        title="Copy Plan as Markdown"
+                        content={planGenerated.plan.steps
+                          .map((s, i) => `${i + 1}. **${s.title}**\n   ${s.description || ""}`)
+                          .join("\n\n")}
+                        shortcut={Keyboard.Shortcut.Common.Copy}
+                      />
+                    </ActionPanel.Section>
+                  )}
+                  {changeSetArtifacts.length > 0 && (
+                    <ActionPanel.Section title="Artifacts">
+                      {changeSetArtifacts.map(
+                        (artifact, index) =>
+                          artifact.changeSet && (
+                            <Action.Push
+                              key={index}
+                              title={`View Change Set: ${artifact.changeSet.source}`}
+                              icon={Icon.Code}
+                              target={<ChangeSetDetailView changeSet={artifact.changeSet} />}
+                            />
+                          ),
+                      )}
+                    </ActionPanel.Section>
+                  )}
+                </ActionPanel>
+              ) : undefined
+            }
+          />
+        );
+      })}
     </List>
   );
 }
@@ -186,7 +212,7 @@ function getActivityMarkdown(activity: Activity): string {
       if (artifact.changeSet) {
         content += `\n**Change Set**: ${artifact.changeSet.source}\n`;
         if (artifact.changeSet.gitPatch) {
-          content += "\n```diff\n" + artifact.changeSet.gitPatch.unidiffPatch + "\n```\n";
+          content += `*Contains a patch with commit message: "${artifact.changeSet.gitPatch.suggestedCommitMessage}"*\n`;
         }
       }
       if (artifact.media) {
