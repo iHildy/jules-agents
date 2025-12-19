@@ -1,27 +1,27 @@
 import {
-  Action,
-  ActionPanel,
-  Color,
-  Form,
-  Icon,
-  Keyboard,
-  launchCommand,
-  LaunchType,
-  List,
-  showToast,
-  Toast,
-  useNavigation,
+    Action,
+    ActionPanel,
+    Color,
+    Form,
+    Icon,
+    Keyboard,
+    launchCommand,
+    LaunchType,
+    List,
+    showToast,
+    Toast,
+    useNavigation,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
-  formatRepoName,
-  formatSessionState,
-  getSessionAccessories,
-  getStatusIconForSession,
-  groupSessions,
+    formatRepoName,
+    formatSessionState,
+    getSessionAccessories,
+    getStatusIconForSession,
+    groupSessions,
 } from "./utils";
 
 function FollowupInstruction(props: { session: Session }) {
@@ -158,14 +158,14 @@ function getActivityTitle(activity: Activity): string {
   if (activity.planApproved) return "Plan Approved";
   if (activity.progressUpdated) return activity.progressUpdated.title || "Progress Update";
   if (activity.sessionCompleted) return "Session Completed";
-  if (activity.sessionFailed) return "Session Failed: " + activity.sessionFailed.reason;
+  if (activity.sessionFailed) return "Session Failed: " + (activity.sessionFailed.reason || "Unknown reason");
   return activity.description || "Activity";
 }
 
 function getActivityMarkdown(activity: Activity): string {
   let content = "";
-  if (activity.userMessaged) content = activity.userMessaged.userMessage;
-  else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage;
+  if (activity.userMessaged) content = activity.userMessaged.userMessage || "";
+  else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage || "";
   else if (activity.planGenerated) {
     const plan = activity.planGenerated.plan;
     content = `**Plan with ${plan.steps.length} steps:**\n\n`;
@@ -176,8 +176,8 @@ function getActivityMarkdown(activity: Activity): string {
     if (plan.steps.length > 4) {
       content += `\n_...and ${plan.steps.length - 4} more steps_`;
     }
-  } else if (activity.progressUpdated) content = activity.progressUpdated.description;
-  else if (activity.sessionFailed) content = activity.sessionFailed.reason;
+  } else if (activity.progressUpdated) content = activity.progressUpdated.description || "";
+  else if (activity.sessionFailed) content = activity.sessionFailed.reason || "";
   else content = activity.description || "";
 
   if (activity.artifacts && activity.artifacts.length > 0) {
