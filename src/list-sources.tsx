@@ -3,7 +3,7 @@ import { useSources } from "./jules";
 import { formatRepoName } from "./utils";
 
 export default function Command() {
-  const { data, isLoading } = useSources();
+  const { data, isLoading, revalidate } = useSources();
 
   return (
     <List isLoading={isLoading}>
@@ -51,6 +51,12 @@ export default function Command() {
                   }
                 />
                 <Action.CopyToClipboard title="Copy Source Name" content={source.name} />
+                <Action
+                  title="Refresh Sources"
+                  icon={Icon.ArrowClockwise}
+                  shortcut={Keyboard.Shortcut.Common.Refresh}
+                  onAction={revalidate}
+                />
               </ActionPanel>
             }
           />

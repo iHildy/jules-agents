@@ -55,8 +55,6 @@ function FollowupInstruction(props: { session: Session }) {
   );
 }
 
-
-
 function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> }) {
   const { pop } = useNavigation();
   const { handleSubmit, itemProps } = useForm<{ reason: string }>({
@@ -463,6 +461,12 @@ export default function Command() {
             icon={Icon.PlusCircle}
             shortcut={Keyboard.Shortcut.Common.New}
             onAction={() => launchCommand({ name: "launch-session", type: LaunchType.UserInitiated })}
+          />
+          <Action
+            title="Refresh Sessions"
+            icon={Icon.ArrowClockwise}
+            shortcut={Keyboard.Shortcut.Common.Refresh}
+            onAction={mutate}
           />
         </ActionPanel>
       }
