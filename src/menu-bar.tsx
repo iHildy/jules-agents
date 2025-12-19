@@ -1,22 +1,29 @@
 import {
-  Clipboard,
-  Color,
-  Icon,
-  launchCommand,
-  LaunchType,
-  MenuBarExtra,
-  open,
-  openCommandPreferences,
-  showHUD,
-  showToast,
-  Toast,
+    Clipboard,
+    Color,
+    Icon,
+    launchCommand,
+    LaunchType,
+    MenuBarExtra,
+    open,
+    openCommandPreferences,
+    showHUD,
+    showToast,
+    Toast,
 } from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
 import { useEffect, useState } from "react";
 import { approvePlan, fetchSessionActivities, useSessions } from "./jules";
 import { useSessionNotifications } from "./notification";
 import { Session, SessionState } from "./types";
-import { formatPrSubtitle, formatPrTitle, formatRepoName, getStatusIconSimpleForSession, groupSessions } from "./utils";
+import {
+    formatPrSubtitle,
+    formatPrTitle,
+    formatSessionState,
+    formatSessionTitle,
+    getStatusIconSimpleForSession,
+    groupSessions,
+} from "./utils";
 
 function SessionMenuBarItemWithPlanSteps({ session }: { session: Session }) {
   const [planSteps, setPlanSteps] = useState<number | undefined>();
@@ -44,8 +51,7 @@ function SessionMenuBarItemWithPlanSteps({ session }: { session: Session }) {
 }
 
 function SessionMenuBarItem({ session, planSteps }: { session: Session; planSteps?: number }) {
-  const rawTitle = session.title || session.id;
-  const title = rawTitle.length > 50 ? rawTitle.substring(0, 50) + "..." : rawTitle;
+  const title = formatSessionTitle(session, 50);
 
   const prUrl = session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
 
@@ -57,49 +63,83 @@ function SessionMenuBarItem({ session, planSteps }: { session: Session; planStep
   ];
 
   return (
-    <MenuBarExtra.Submenu
-      key={session.id}
-      icon={getStatusIconSimpleForSession(session)}
-      title={title}
-      subtitle={formatRepoName(session.sourceContext.source)}
-    >
-      <MenuBarExtra.Item
-        title="Open Session"
-        icon={Icon.Globe}
-        tooltip={session.prompt + (planSteps ? `\n\nPlan steps: ${planSteps}` : "")}
-        onAction={async (event) => {
-          switch (event.type) {
-            case "left-click":
-              await open(session.url);
-              break;
-            case "right-click":
-              await Clipboard.copy(session.url);
-              await showHUD("Copied URL to clipboard");
-              break;
-          }
-        }}
-      />
-      {prUrl && (
+    <>
+      <MenuBarExtra.Submenu
+        key={session.id}
+        icon={getStatusIconSimpleForSession(session)}
+        title={title + (planSteps ? ` (${planSteps} steps)` : "")}
+      >
+        <MenuBarExtra.Item title={`Status: ${formatSessionState(session.state)}`} icon={getStatusIconSimpleForSession(session)} />
+        {session.state === SessionState.AWAITING_PLAN_APPROVAL && (
+          <MenuBarExtra.Item
+            title="Approve Plan"
+            icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
+            onAction={async () => {
+              try {
+                await showToast({ style: Toast.Style.Animated, title: "Approving plan" });
+                await approvePlan(session.name);
+                await showToast({ style: Toast.Style.Success, title: "Plan approved" });
+              } catch (e) {
+                await showFailureToast(e, { title: "Failed to approve plan" });
+              }
+            }}
+          />
+        )}
         <MenuBarExtra.Item
-          icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
-          title={formatPrTitle(prUrl)}
-          subtitle={formatPrSubtitle(prUrl)}
+          title="Open Session"
+          icon={Icon.Globe}
+          tooltip={session.prompt + (planSteps ? `\n\nPlan steps: ${planSteps}` : "")}
           onAction={async (event) => {
             switch (event.type) {
               case "left-click":
-                await open(prUrl);
+                await open(session.url);
                 break;
               case "right-click":
-                await Clipboard.copy(prUrl);
-                await showHUD("Copied PR URL to clipboard");
+                await Clipboard.copy(session.url);
+                await showHUD("Copied URL to clipboard");
                 break;
             }
           }}
         />
-      )}
+        {prUrl && (
+          <MenuBarExtra.Item
+            icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
+            title={formatPrTitle(prUrl)}
+            subtitle={formatPrSubtitle(prUrl)}
+            onAction={async (event) => {
+              switch (event.type) {
+                case "left-click":
+                  await open(prUrl);
+                  break;
+                case "right-click":
+                  await Clipboard.copy(prUrl);
+                  await showHUD("Copied PR URL to clipboard");
+                  break;
+              }
+            }}
+          />
+        )}
+        {runningStates.includes(session.state) && (
+          <MenuBarExtra.Item
+            title="Send Quick Message"
+            icon={Icon.SpeechBubble}
+            onAction={async () => {
+              try {
+                await launchCommand({
+                  name: "send-quick-message",
+                  type: LaunchType.UserInitiated,
+                  context: { session },
+                });
+              } catch (e) {
+                await showFailureToast(e, { title: "Failed to open quick message form" });
+              }
+            }}
+          />
+        )}
+      </MenuBarExtra.Submenu>
       {session.state === SessionState.AWAITING_PLAN_APPROVAL && (
         <MenuBarExtra.Item
-          title="Approve Plan"
+          title={`   Approve Plan for "${title}"`}
           icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
           onAction={async () => {
             try {
@@ -112,24 +152,7 @@ function SessionMenuBarItem({ session, planSteps }: { session: Session; planStep
           }}
         />
       )}
-      {runningStates.includes(session.state) && (
-        <MenuBarExtra.Item
-          title="Send Quick Message"
-          icon={Icon.SpeechBubble}
-          onAction={async () => {
-            try {
-              await launchCommand({
-                name: "send-quick-message",
-                type: LaunchType.UserInitiated,
-                context: { session },
-              });
-            } catch (e) {
-              await showFailureToast(e, { title: "Failed to open quick message form" });
-            }
-          }}
-        />
-      )}
-    </MenuBarExtra.Submenu>
+    </>
   );
 }
 

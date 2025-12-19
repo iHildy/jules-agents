@@ -9,7 +9,7 @@
     - Add "View Plan" action to `PlanGenerated` activity items.
     - Consider inline expansion in activity list vs. push navigation.
 
-- [ ] **Enhanced Menu Bar Actions**
+- [x] **Enhanced Menu Bar Actions**
     - Add "Approve Plan" action directly to Menu Bar items when session is `AWAITING_PLAN_APPROVAL`.
     - Add "Send Quick Message" option to running sessions.
     - Show plan step count in tooltip for planning sessions.

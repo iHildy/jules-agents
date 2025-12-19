@@ -21,6 +21,7 @@ import { Activity, Plan, Session, SessionState } from "./types";
 import {
   formatRepoName,
   formatSessionState,
+  formatSessionTitle,
   getSessionAccessories,
   getStatusIconForSession,
   groupSessions,
@@ -197,7 +198,10 @@ function getActivityTitle(activity: Activity): string {
   return activity.description || "Activity";
 }
 
-function getActivityMarkdown(activity: Activity, options: { includeFullArtifacts?: boolean } = { includeFullArtifacts: true }): string {
+function getActivityMarkdown(
+  activity: Activity,
+  options: { includeFullArtifacts?: boolean } = { includeFullArtifacts: true },
+): string {
   let content = "";
   if (activity.userMessaged) content = activity.userMessaged.userMessage || "";
   else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage || "";
@@ -335,8 +339,7 @@ function SessionListItem(props: {
   const { push } = useNavigation();
   const prUrl = props.session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
 
-  const rawTitle = props.session.title || props.session.id;
-  const title = rawTitle.length > 75 ? rawTitle.substring(0, 75) + "..." : rawTitle;
+  const title = formatSessionTitle(props.session, 75);
 
   return (
     <List.Item
@@ -458,7 +461,9 @@ function SessionListItem(props: {
                     // since the most recent activities (at the end) are usually more important for a summary.
                     const MAX_CHARS = 25000;
                     const truncatedContent =
-                      content.length > MAX_CHARS ? "... (older activities truncated)\n\n" + content.slice(-MAX_CHARS) : content;
+                      content.length > MAX_CHARS
+                        ? "... (older activities truncated)\n\n" + content.slice(-MAX_CHARS)
+                        : content;
 
                     const summary = await AI.ask(
                       `Summarize the following session activities of a Jules Agent session. Be concise and highlight the main progress and any issues:\n\n${truncatedContent}`,

@@ -199,3 +199,8 @@ export function formatSessionState(state: SessionState): string {
       return state;
   }
 }
+
+export function formatSessionTitle(session: Session, maxLength = 50): string {
+  const rawTitle = (session.title || session.id).split("\n")[0].trim();
+  return rawTitle.length > maxLength ? rawTitle.substring(0, maxLength) + "..." : rawTitle;
+}
