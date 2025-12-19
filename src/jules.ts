@@ -1,13 +1,17 @@
 import { getPreferenceValues } from "@raycast/api";
 import { useCachedPromise, useFetch } from "@raycast/utils";
+import { useEffect } from "react";
 import { URLSearchParams } from "url";
-import { ListActivitiesResponse, ListSessionsResponse, ListSourcesResponse, Session, Source } from "./types";
+import {
+  ListActivitiesResponse,
+  ListSessionsResponse,
+  ListSourcesResponse,
+  Preferences,
+  Session,
+  Source,
+} from "./types";
 
-interface ExtensionPreferences {
-  julesApiKey: string;
-}
-
-const { julesApiKey } = getPreferenceValues<ExtensionPreferences>();
+const { julesApiKey } = getPreferenceValues<Preferences>();
 
 const BASE_URL = "https://jules.googleapis.com/v1alpha";
 
@@ -66,6 +70,23 @@ export function useSession(sessionId: string) {
   return useFetch<Session>(`${BASE_URL}/${sessionId}`, {
     headers: getHeaders(),
   });
+}
+
+export function useSessionWithAutoRefresh(sessionId: string) {
+  const { autoRefresh } = getPreferenceValues<Preferences>();
+  const fetcher = useSession(sessionId);
+
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(() => {
+        fetcher.revalidate();
+      }, 5000); // 5 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
+
+  return fetcher;
 }
 
 // --- Activities ---

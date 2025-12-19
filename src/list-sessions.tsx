@@ -16,8 +16,8 @@ import {
   useNavigation,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
-import { format } from "date-fns";
-import { useState } from "react";
+import { format, formatDistanceToNow } from "date-fns";
+import { useEffect, useState } from "react";
 import {
   CopyActivityLogAction,
   CopyIdAction,
@@ -29,7 +29,14 @@ import {
   CopySummaryAction,
   CopyUrlAction,
 } from "./components/CopyActions";
-import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
+import {
+  approvePlan,
+  fetchSessionActivities,
+  sendMessage,
+  useSessionActivities,
+  useSessions,
+  useSessionWithAutoRefresh,
+} from "./jules";
 import { Activity, Plan, Preferences, Session, SessionState } from "./types";
 import {
   formatBashOutputMarkdown,
@@ -337,7 +344,19 @@ function PlanDetailView(props: { plan: Plan; session: Session; mutate: () => Pro
 }
 
 function SessionDetail(props: { session: Session }) {
-  const { session } = props;
+  const { data: session, isLoading } = useSessionWithAutoRefresh(props.session.name);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLastUpdated(new Date());
+    }
+  }, [isLoading]);
+
+  if (!session) {
+    // Show a loading detail while the session is loading
+    return <List.Item.Detail isLoading />;
+  }
 
   const prUrl = session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
 
@@ -351,6 +370,10 @@ function SessionDetail(props: { session: Session }) {
           <List.Item.Detail.Metadata.Separator />
           {prUrl && <List.Item.Detail.Metadata.Link title="Pull Request" text={prUrl} target={prUrl} />}
           <List.Item.Detail.Metadata.Label title="Repository" text={formatRepoName(session.sourceContext.source)} />
+          <List.Item.Detail.Metadata.Label
+            title="Last updated"
+            text={formatDistanceToNow(lastUpdated, { addSuffix: true })}
+          />
         </List.Item.Detail.Metadata>
       }
     />

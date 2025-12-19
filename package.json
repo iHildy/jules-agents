@@ -104,6 +104,15 @@
       ],
       "default": "all",
       "required": false
+    },
+    {
+      "name": "autoRefresh",
+      "title": "Auto Refresh",
+      "label": "Automatically refresh session details",
+      "description": "Whether the session detail view should automatically refresh",
+      "type": "checkbox",
+      "default": true,
+      "required": false
     }
   ],
   "dependencies": {
