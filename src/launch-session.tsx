@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, getPreferenceValues, open, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, AI, Form, getPreferenceValues, Icon, open, showToast, Toast } from "@raycast/api";
 import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
 import { SourceDropdown } from "./components/SourceDropdown";
 import { createSession, useSources } from "./jules";
@@ -17,7 +17,7 @@ export default function Command() {
   const preferences = getPreferenceValues<Preferences>();
   const { data: sources, isLoading: isLoadingSources } = useSources();
 
-  const { reset, focus, handleSubmit, itemProps } = useForm<Values>({
+  const { reset, focus, handleSubmit, itemProps, setValue } = useForm<Values>({
     validation: {
       prompt: FormValidation.Required,
       sourceId: FormValidation.Required,
@@ -81,6 +81,28 @@ export default function Command() {
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Submit Task" onSubmit={handleSubmit} />
+          <Action
+            title="Improve Prompt"
+            icon={Icon.Wand}
+            onAction={async () => {
+              if (itemProps.prompt.value) {
+                try {
+                  const improvedPrompt = await AI.improvePrompt(
+                    itemProps.prompt.value,
+                    "Refine the user's instruction for a helpful AI software engineer named Jules.",
+                  );
+                  setValue("prompt", improvedPrompt);
+                } catch (e) {
+                  showFailureToast(e, { title: "Failed to improve prompt" });
+                }
+              } else {
+                showToast({
+                  style: Toast.Style.Failure,
+                  title: "Please enter a prompt first",
+                });
+              }
+            }}
+          />
         </ActionPanel>
       }
       isLoading={isLoadingSources}

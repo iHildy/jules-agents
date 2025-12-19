@@ -1,4 +1,5 @@
 import {
+  AI,
   Action,
   ActionPanel,
   Color,
@@ -54,8 +55,6 @@ function FollowupInstruction(props: { session: Session }) {
     </Form>
   );
 }
-
-
 
 function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> }) {
   const { pop } = useNavigation();
@@ -377,6 +376,32 @@ function SessionListItem(props: {
                   windows: { modifiers: ["ctrl", "shift"], key: "v" },
                 } as Keyboard.Shortcut
               }
+            />
+            <Action
+              title="Summarize Session"
+              icon={Icon.Wand}
+              onAction={async () => {
+                const toast = await showToast({ style: Toast.Style.Animated, title: "Summarizing session" });
+                try {
+                  const activities = await fetchSessionActivities(props.session.name);
+                  if (activities.length > 0) {
+                    const content = activities.map((a) => getActivityMarkdown(a)).join("\n\n---\n\n");
+                    const summary = await AI.summarize(content);
+                    push(
+                      <List>
+                        <List.Item title="Summary" detail={<List.Item.Detail markdown={summary} />} />
+                      </List>,
+                    );
+                    toast.style = Toast.Style.Success;
+                    toast.title = "Session summarized";
+                  } else {
+                    toast.style = Toast.Style.Failure;
+                    toast.title = "No activity to summarize";
+                  }
+                } catch (e) {
+                  await showFailureToast(e, { title: "Failed to summarize session" });
+                }
+              }}
             />
           </ActionPanel.Section>
           <ActionPanel.Section title="Copy">
