@@ -89,7 +89,7 @@ export interface PlanStep {
   id: string;
   title: string;
   description: string;
-  index: number;
+  index?: number;
 }
 
 export interface PlanApproved {
