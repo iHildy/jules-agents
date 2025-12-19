@@ -97,6 +97,21 @@ export function useSessionActivities(sessionId: string, config?: { pageSize?: nu
   );
 }
 
+export async function fetchSessionActivities(sessionId: string) {
+  const params = new URLSearchParams({ pageSize: "100" });
+  const response = await fetch(`${BASE_URL}/${sessionId}/activities?${params.toString()}`, {
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Failed to fetch activities: ${response.statusText} - ${errorBody}`);
+  }
+
+  const result = (await response.json()) as ListActivitiesResponse;
+  return result.activities || [];
+}
+
 export async function sendMessage(sessionId: string, prompt: string) {
   const response = await fetch(`${BASE_URL}/${sessionId}:sendMessage`, {
     method: "POST",

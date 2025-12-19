@@ -14,7 +14,7 @@ import {
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
-import { approvePlan, sendMessage, useSessionActivities, useSessions } from "./jules";
+import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
   formatRepoName,
@@ -51,6 +51,40 @@ function FollowupInstruction(props: { session: Session }) {
       }
     >
       <Form.TextArea title="Message" placeholder="Send a message to the session..." {...itemProps.prompt} />
+    </Form>
+  );
+}
+
+
+
+function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> }) {
+  const { pop } = useNavigation();
+  const { handleSubmit, itemProps } = useForm<{ reason: string }>({
+    onSubmit: async (values) => {
+      try {
+        await showToast({ style: Toast.Style.Animated, title: "Declining plan" });
+        await sendMessage(props.session.name, `I decline the plan. Reason: ${values.reason.trim()}`);
+        await showToast({ style: Toast.Style.Success, title: "Plan declined" });
+        await props.mutate();
+        pop();
+      } catch (e) {
+        await showFailureToast(e, { title: "Failed to decline plan" });
+      }
+    },
+    validation: {
+      reason: FormValidation.Required,
+    },
+  });
+
+  return (
+    <Form
+      actions={
+        <ActionPanel>
+          <Action.SubmitForm title="Decline Plan" style={Action.Style.Destructive} onSubmit={handleSubmit} />
+        </ActionPanel>
+      }
+    >
+      <Form.TextArea title="Reason" placeholder="Why are you declining this plan?" {...itemProps.reason} />
     </Form>
   );
 }
@@ -223,6 +257,7 @@ function SessionListItem(props: {
   isShowingDetail: boolean;
   setIsShowingDetail: (value: boolean) => void;
 }) {
+  const { push } = useNavigation();
   const prUrl = props.session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
 
   const rawTitle = props.session.title || props.session.id;
@@ -262,8 +297,7 @@ function SessionListItem(props: {
             <ActionPanel.Section>
               <Action
                 title="Approve Plan"
-                icon={Icon.CheckCircle}
-                style={Action.Style.Destructive}
+                icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
                 onAction={async () => {
                   try {
                     await showToast({ style: Toast.Style.Animated, title: "Approving plan" });
@@ -272,6 +306,31 @@ function SessionListItem(props: {
                     await props.mutate();
                   } catch (e) {
                     await showFailureToast(e, { title: "Failed to approve plan" });
+                  }
+                }}
+              />
+              <Action.Push
+                title="Decline Plan"
+                icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
+                target={<DeclinePlanForm session={props.session} mutate={props.mutate} />}
+              />
+              <Action
+                title="View Plan"
+                icon={Icon.List}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
+                onAction={async () => {
+                  try {
+                    await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
+                    const activities = await fetchSessionActivities(props.session.name);
+                    // Find the latest PlanGenerated activity
+                    const planActivity = [...activities].reverse().find((a) => a.planGenerated);
+                    if (planActivity?.planGenerated) {
+                      push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
+                    } else {
+                      await showToast({ style: Toast.Style.Failure, title: "No plan found" });
+                    }
+                  } catch (e) {
+                    await showFailureToast(e, { title: "Failed to load plan" });
                   }
                 }}
               />
