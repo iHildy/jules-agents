@@ -1,4 +1,3 @@
-
 import { Action, ActionPanel, Detail, Grid, Icon, showInFinder, showToast, Toast } from "@raycast/api";
 import { mkdir, writeFile } from "fs/promises";
 import { homedir } from "os";

@@ -1,15 +1,15 @@
 import {
-    Clipboard,
-    Color,
-    Icon,
-    launchCommand,
-    LaunchType,
-    MenuBarExtra,
-    open,
-    openCommandPreferences,
-    showHUD,
-    showToast,
-    Toast,
+  Clipboard,
+  Color,
+  Icon,
+  launchCommand,
+  LaunchType,
+  MenuBarExtra,
+  open,
+  openCommandPreferences,
+  showHUD,
+  showToast,
+  Toast,
 } from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
 import { useEffect, useState } from "react";
@@ -17,12 +17,12 @@ import { approvePlan, fetchSessionActivities, useSessions } from "./jules";
 import { useSessionNotifications } from "./notification";
 import { Session, SessionState } from "./types";
 import {
-    formatPrSubtitle,
-    formatPrTitle,
-    formatSessionState,
-    formatSessionTitle,
-    getStatusIconSimpleForSession,
-    groupSessions,
+  formatPrSubtitle,
+  formatPrTitle,
+  formatSessionState,
+  formatSessionTitle,
+  getStatusIconSimpleForSession,
+  groupSessions,
 } from "./utils";
 
 function SessionMenuBarItemWithPlanSteps({ session }: { session: Session }) {
@@ -69,7 +69,10 @@ function SessionMenuBarItem({ session, planSteps }: { session: Session; planStep
         icon={getStatusIconSimpleForSession(session)}
         title={title + (planSteps ? ` (${planSteps} steps)` : "")}
       >
-        <MenuBarExtra.Item title={`Status: ${formatSessionState(session.state)}`} icon={getStatusIconSimpleForSession(session)} />
+        <MenuBarExtra.Item
+          title={`Status: ${formatSessionState(session.state)}`}
+          icon={getStatusIconSimpleForSession(session)}
+        />
         {session.state === SessionState.AWAITING_PLAN_APPROVAL && (
           <MenuBarExtra.Item
             title="Approve Plan"
