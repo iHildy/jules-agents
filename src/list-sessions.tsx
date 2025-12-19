@@ -23,6 +23,7 @@ import {
   getStatusIconForSession,
   groupSessions,
 } from "./utils";
+import { ChangeSetDetailView } from "./components/ChangeSetDetailView";
 
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
@@ -106,20 +107,37 @@ function SessionConversation(props: { session: Session }) {
           subtitle={format(new Date(activity.createTime), "HH:mm")}
           detail={<List.Item.Detail markdown={getActivityMarkdown(activity)} />}
           actions={
-            activity.planGenerated ? (
+            activity.planGenerated || activity.artifacts?.find((a) => a.changeSet) ? (
               <ActionPanel>
-                <Action.Push
-                  title="View Plan"
-                  icon={Icon.List}
-                  target={<PlanDetailView plan={activity.planGenerated.plan} />}
-                />
-                <Action.CopyToClipboard
-                  title="Copy Plan as Markdown"
-                  content={activity.planGenerated.plan.steps
-                    .map((s, i) => `${i + 1}. **${s.title}**\n   ${s.description || ""}`)
-                    .join("\n\n")}
-                  shortcut={Keyboard.Shortcut.Common.Copy}
-                />
+                {activity.planGenerated && (
+                  <>
+                    <Action.Push
+                      title="View Plan"
+                      icon={Icon.List}
+                      target={<PlanDetailView plan={activity.planGenerated.plan} />}
+                    />
+                    <Action.CopyToClipboard
+                      title="Copy Plan as Markdown"
+                      content={activity.planGenerated.plan.steps
+                        .map((s, i) => `${i + 1}. **${s.title}**\n   ${s.description || ""}`)
+                        .join("\n\n")}
+                      shortcut={Keyboard.Shortcut.Common.Copy}
+                    />
+                  </>
+                )}
+                {activity.artifacts?.map((artifact, index) => {
+                  if (artifact.changeSet) {
+                    return (
+                      <Action.Push
+                        key={index}
+                        title="View Change Set"
+                        icon={Icon.Code}
+                        target={<ChangeSetDetailView changeSet={artifact.changeSet} />}
+                      />
+                    );
+                  }
+                  return null;
+                })}
               </ActionPanel>
             ) : undefined
           }
@@ -163,9 +181,6 @@ function getActivityMarkdown(activity: Activity): string {
     activity.artifacts.forEach((artifact) => {
       if (artifact.changeSet) {
         content += `\n**Change Set**: ${artifact.changeSet.source}\n`;
-        if (artifact.changeSet.gitPatch) {
-          content += "\n```diff\n" + artifact.changeSet.gitPatch.unidiffPatch + "\n```\n";
-        }
       }
       if (artifact.media) {
         content += `\n![Media](data:${artifact.media.mimeType};base64,${artifact.media.data})\n`;
