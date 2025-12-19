@@ -42,6 +42,13 @@
       "description": "Check all your sessions from your menu bar.",
       "mode": "menu-bar",
       "refreshInterval": 5
+    },
+    {
+      "name": "send-quick-message",
+      "title": "Send Quick Message",
+      "subtitle": "Jules Agents",
+      "description": "Send a message to a running Jules session.",
+      "mode": "view"
     }
   ],
 
