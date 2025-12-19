@@ -1,27 +1,27 @@
 import {
-  Action,
-  ActionPanel,
-  Color,
-  Form,
-  Icon,
-  Keyboard,
-  launchCommand,
-  LaunchType,
-  List,
-  showToast,
-  Toast,
-  useNavigation,
+    Action,
+    ActionPanel,
+    Color,
+    Form,
+    Icon,
+    Keyboard,
+    launchCommand,
+    LaunchType,
+    List,
+    showToast,
+    Toast,
+    useNavigation,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
-  formatRepoName,
-  formatSessionState,
-  getSessionAccessories,
-  getStatusIconForSession,
-  groupSessions,
+    formatRepoName,
+    formatSessionState,
+    getSessionAccessories,
+    getStatusIconForSession,
+    groupSessions,
 } from "./utils";
 
 function FollowupInstruction(props: { session: Session }) {
@@ -229,18 +229,8 @@ function SessionDetail(props: { session: Session }) {
           {session.title && <List.Item.Detail.Metadata.Label title="Title" text={session.title} />}
           <List.Item.Detail.Metadata.Label title="State" text={formatSessionState(session.state)} />
           <List.Item.Detail.Metadata.Separator />
-          {prUrl && (
-            <>
-              <List.Item.Detail.Metadata.Link title="Pull Request" text={prUrl} target={prUrl} />
-              <List.Item.Detail.Metadata.Separator />
-            </>
-          )}
+          {prUrl && <List.Item.Detail.Metadata.Link title="Pull Request" text={prUrl} target={prUrl} />}
           <List.Item.Detail.Metadata.Label title="Repository" text={formatRepoName(session.sourceContext.source)} />
-          <List.Item.Detail.Metadata.Separator />
-          <List.Item.Detail.Metadata.Label
-            title="Created"
-            text={format(new Date(session.createTime), "EEEE d MMMM yyyy 'at' HH:mm")}
-          />
         </List.Item.Detail.Metadata>
       }
     />
