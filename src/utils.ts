@@ -209,11 +209,20 @@ export function formatBashOutputMarkdown(
   bashOutput: BashOutput,
   options: { includeFullOutput?: boolean } = { includeFullOutput: true },
 ): string {
-  const exitCodeColor = bashOutput.exitCode === 0 ? Color.Green : Color.Red;
+  const exitCode = bashOutput.exitCode;
+  const isSuccess = exitCode === 0;
+  
+  let exitCodeDisplay = "";
+  if (exitCode === undefined || exitCode === null) {
+    exitCodeDisplay = "N/A";
+  } else {
+    exitCodeDisplay = `${exitCode} ${isSuccess ? "✅" : "❌"}`;
+  }
+
   let markdown = `
 **Command**: \`${bashOutput.command}\`
 
-**Exit Code**: <font color="${exitCodeColor}">${bashOutput.exitCode}</font>
+**Exit Code**: ${exitCodeDisplay}
 `;
 
   if (options.includeFullOutput) {
