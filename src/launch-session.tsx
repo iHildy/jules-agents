@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Form, getPreferenceValues, open, showToast, Toast } from "@raycast/api";
 import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
 import { SourceDropdown } from "./components/SourceDropdown";
-import { createSession } from "./jules";
+import { createSession, useSources } from "./jules";
 import { AutomationMode, Preferences } from "./types";
 import { refreshMenuBar } from "./utils";
 
@@ -15,6 +15,7 @@ type Values = {
 
 export default function Command() {
   const preferences = getPreferenceValues<Preferences>();
+  const { data: sources, isLoading: isLoadingSources } = useSources();
 
   const { reset, focus, handleSubmit, itemProps } = useForm<Values>({
     validation: {
@@ -29,11 +30,23 @@ export default function Command() {
       const toast = await showToast({ style: Toast.Style.Animated, title: "Launching Jules Session" });
 
       try {
+        let startingBranch = values.startingBranch;
+
+        if (!startingBranch) {
+          const selectedSource = sources?.find((s) => s.name === values.sourceId);
+          if (selectedSource?.githubRepo?.defaultBranch?.displayName) {
+            startingBranch = selectedSource.githubRepo.defaultBranch.displayName;
+          } else {
+            // Fallback to "main" if we can't find the source or its default branch
+            startingBranch = "main";
+          }
+        }
+
         const response = await createSession({
           prompt: values.prompt,
           sourceContext: {
             source: values.sourceId,
-            githubRepoContext: values.startingBranch ? { startingBranch: values.startingBranch } : undefined,
+            githubRepoContext: { startingBranch },
           },
           requirePlanApproval: values.requirePlanApproval,
           automationMode: values.autoCreatePR
@@ -67,9 +80,10 @@ export default function Command() {
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Submit Task" onSubmit={handleSubmit} />
         </ActionPanel>
       }
+      isLoading={isLoadingSources}
     >
       <Form.TextArea title="Prompt" placeholder="What should Jules do?" {...itemProps.prompt} />
 
