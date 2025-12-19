@@ -55,8 +55,6 @@ function FollowupInstruction(props: { session: Session }) {
   );
 }
 
-
-
 function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> }) {
   const { pop } = useNavigation();
   const { handleSubmit, itemProps } = useForm<{ reason: string }>({
@@ -91,15 +89,39 @@ function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> 
 
 function SessionConversation(props: { session: Session }) {
   const { data, isLoading } = useSessionActivities(props.session.name);
+  const [filter, setFilter] = useCachedState("activityFilter", "all");
+
+  const filteredData = data?.filter((activity) => {
+    if (filter === "messages") {
+      return activity.userMessaged || activity.agentMessaged;
+    }
+    if (filter === "artifacts") {
+      return activity.artifacts && activity.artifacts.length > 0;
+    }
+    if (filter === "hide-progress") {
+      return !activity.progressUpdated;
+    }
+    return true;
+  });
 
   return (
     <List
       isLoading={isLoading}
       isShowingDetail
       navigationTitle={`Activity: ${props.session.title || props.session.id}`}
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter Activities" value={filter} onChange={setFilter}>
+          <List.Dropdown.Item title="All Activities" value="all" />
+          <List.Dropdown.Section>
+            <List.Dropdown.Item title="Messages Only" value="messages" />
+            <List.Dropdown.Item title="Artifacts Only" value="artifacts" />
+            <List.Dropdown.Item title="Hide Progress Updates" value="hide-progress" />
+          </List.Dropdown.Section>
+        </List.Dropdown>
+      }
     >
       <List.EmptyView title="No Activity Yet" description="This session hasn't started yet" icon={Icon.SpeechBubble} />
-      {data?.map((activity) => (
+      {filteredData?.map((activity) => (
         <List.Item
           key={activity.id}
           title={getActivityTitle(activity)}
