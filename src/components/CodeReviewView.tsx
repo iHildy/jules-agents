@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Detail, Keyboard } from "@raycast/api";
 import { ChangeSet } from "../types";
 
-export function ChangeSetDetailView(props: { changeSet: ChangeSet }) {
+export function CodeReviewView(props: { changeSet: ChangeSet }) {
   const { changeSet } = props;
   const patch = changeSet.gitPatch?.unidiffPatch;
   const commitMessage = changeSet.gitPatch?.suggestedCommitMessage;
@@ -12,13 +12,7 @@ export function ChangeSetDetailView(props: { changeSet: ChangeSet }) {
   return (
     <Detail
       markdown={markdown}
-      navigationTitle="Change Set"
-      metadata={
-        <Detail.Metadata>
-          {baseCommitId && <Detail.Metadata.Label title="Base Commit ID" text={baseCommitId} />}
-          {commitMessage && <Detail.Metadata.Label title="Suggested Commit Message" text={commitMessage} />}
-        </Detail.Metadata>
-      }
+      navigationTitle={commitMessage ? `Code Review: ${commitMessage}` : "Code Review"}
       actions={
         <ActionPanel>
           {patch && (
@@ -29,13 +23,14 @@ export function ChangeSetDetailView(props: { changeSet: ChangeSet }) {
             />
           )}
           {commitMessage && (
-            <Action.CopyToClipboard
-              title="Copy Commit Message"
-              content={commitMessage}
-            />
+            <Action.CopyToClipboard title="Copy Commit Message" content={commitMessage} />
+          )}
+          {baseCommitId && (
+            <Action.CopyToClipboard title="Copy Base Commit ID" content={baseCommitId} />
           )}
         </ActionPanel>
       }
     />
   );
 }
+

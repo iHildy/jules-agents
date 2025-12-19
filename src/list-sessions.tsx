@@ -1,29 +1,29 @@
 import {
-  Action,
-  ActionPanel,
-  Color,
-  Form,
-  Icon,
-  Keyboard,
-  launchCommand,
-  LaunchType,
-  List,
-  showToast,
-  Toast,
-  useNavigation,
+    Action,
+    ActionPanel,
+    Color,
+    Form,
+    Icon,
+    Keyboard,
+    launchCommand,
+    LaunchType,
+    List,
+    showToast,
+    Toast,
+    useNavigation,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
+import { CodeReviewView } from "./components/CodeReviewView";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
-import { Activity, Plan, Session, SessionState } from "./types";
+import { Activity, Artifact, Plan, Session, SessionState } from "./types";
 import {
-  formatRepoName,
-  formatSessionState,
-  getSessionAccessories,
-  getStatusIconForSession,
-  groupSessions,
+    formatRepoName,
+    formatSessionState,
+    getSessionAccessories,
+    getStatusIconForSession,
+    groupSessions,
 } from "./utils";
-import { ChangeSetDetailView } from "./components/ChangeSetDetailView";
 
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
@@ -130,9 +130,9 @@ function SessionConversation(props: { session: Session }) {
                     return (
                       <Action.Push
                         key={index}
-                        title="View Change Set"
+                        title="View Code Review"
                         icon={Icon.Code}
-                        target={<ChangeSetDetailView changeSet={artifact.changeSet} />}
+                        target={<CodeReviewView changeSet={artifact.changeSet} />}
                       />
                     );
                   }
@@ -180,7 +180,7 @@ function getActivityMarkdown(activity: Activity): string {
     content += "\n\n### Artifacts\n";
     activity.artifacts.forEach((artifact) => {
       if (artifact.changeSet) {
-        content += `\n**Change Set**: ${artifact.changeSet.source}\n`;
+        content += `\n**Code Review**: ${artifact.changeSet.source}\n`;
       }
       if (artifact.media) {
         content += `\n![Media](data:${artifact.media.mimeType};base64,${artifact.media.data})\n`;
@@ -232,6 +232,58 @@ function PlanDetailView(props: { plan: Plan }) {
     </List>
   );
 }
+
+function ViewPlanAction(props: { session: Session }) {
+  const { push } = useNavigation();
+  return (
+    <Action
+      title="View Plan"
+      icon={Icon.List}
+      shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
+      onAction={async () => {
+        try {
+          await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
+          const activities = await fetchSessionActivities(props.session.name);
+          const planActivity = [...activities].reverse().find((a) => a.planGenerated);
+          if (planActivity?.planGenerated) {
+            push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
+          } else {
+            await showToast({ style: Toast.Style.Failure, title: "No plan found" });
+          }
+        } catch (e) {
+          await showFailureToast(e, { title: "Failed to load plan" });
+        }
+      }}
+    />
+  );
+}
+
+function ViewCodeReviewAction(props: { session: Session }) {
+  const { push } = useNavigation();
+  return (
+    <Action
+      title="View Code Review"
+      icon={Icon.Code}
+      shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+      onAction={async () => {
+        try {
+          await showToast({ style: Toast.Style.Animated, title: "Fetching code review" });
+          const activities = await fetchSessionActivities(props.session.name);
+          const changeSetActivity = [...activities].reverse().find((a) => a.artifacts?.some((art: Artifact) => art.changeSet));
+          const changeSet = changeSetActivity?.artifacts?.find((art: Artifact) => art.changeSet)?.changeSet;
+          if (changeSet) {
+            push(<CodeReviewView changeSet={changeSet} />);
+          } else {
+            await showToast({ style: Toast.Style.Failure, title: "No code review found" });
+          }
+        } catch (e) {
+          await showFailureToast(e, { title: "Failed to load code review" });
+        }
+      }}
+    />
+  );
+}
+
 
 function SessionDetail(props: { session: Session }) {
   const { session } = props;
@@ -307,6 +359,7 @@ function SessionListItem(props: {
                 }
               />
             )}
+            <ViewCodeReviewAction session={props.session} />
           </ActionPanel.Section>
           {props.session.state === SessionState.AWAITING_PLAN_APPROVAL && (
             <ActionPanel.Section>
@@ -329,26 +382,7 @@ function SessionListItem(props: {
                 icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
                 target={<DeclinePlanForm session={props.session} mutate={props.mutate} />}
               />
-              <Action
-                title="View Plan"
-                icon={Icon.List}
-                shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
-                onAction={async () => {
-                  try {
-                    await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
-                    const activities = await fetchSessionActivities(props.session.name);
-                    // Find the latest PlanGenerated activity
-                    const planActivity = [...activities].reverse().find((a) => a.planGenerated);
-                    if (planActivity?.planGenerated) {
-                      push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
-                    } else {
-                      await showToast({ style: Toast.Style.Failure, title: "No plan found" });
-                    }
-                  } catch (e) {
-                    await showFailureToast(e, { title: "Failed to load plan" });
-                  }
-                }}
-              />
+              <ViewPlanAction session={props.session} />
             </ActionPanel.Section>
           )}
           <ActionPanel.Section title="Edit">
