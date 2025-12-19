@@ -13,6 +13,7 @@ import {
   showToast,
   Toast,
   useNavigation,
+  getPreferenceValues,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
@@ -123,7 +124,8 @@ function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> 
 
 function SessionConversation(props: { session: Session; mutate: () => Promise<void> }) {
   const { data, isLoading } = useSessionActivities(props.session.name);
-  const [filter, setFilter] = useCachedState("activityFilter", "all");
+  const { defaultActivityFilter } = getPreferenceValues();
+  const [filter, setFilter] = useCachedState("activityFilter", defaultActivityFilter);
 
   const filteredData = data?.filter((activity) => {
     if (filter === "messages") {
