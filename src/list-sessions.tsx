@@ -55,8 +55,6 @@ function FollowupInstruction(props: { session: Session }) {
   );
 }
 
-
-
 function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> }) {
   const { pop } = useNavigation();
   const { handleSubmit, itemProps } = useForm<{ reason: string }>({
