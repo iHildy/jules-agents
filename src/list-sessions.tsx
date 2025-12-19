@@ -55,8 +55,6 @@ function FollowupInstruction(props: { session: Session }) {
   );
 }
 
-
-
 function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> }) {
   const { pop } = useNavigation();
   const { handleSubmit, itemProps } = useForm<{ reason: string }>({
@@ -243,8 +241,6 @@ function SessionDetail(props: { session: Session }) {
             title="Created"
             text={format(new Date(session.createTime), "EEEE d MMMM yyyy 'at' HH:mm")}
           />
-          <List.Item.Detail.Metadata.Separator />
-          <List.Item.Detail.Metadata.Label title="ID" text={session.id} />
         </List.Item.Detail.Metadata>
       }
     />
