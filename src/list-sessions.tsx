@@ -57,6 +57,37 @@ function FollowupInstruction(props: { session: Session }) {
   );
 }
 
+function ApprovePlanAction(props: { session: Session; onApproved?: () => void }) {
+  return (
+    <Action
+      title="Approve Plan"
+      icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
+      onAction={async () => {
+        try {
+          await showToast({ style: Toast.Style.Animated, title: "Approving plan" });
+          await approvePlan(props.session.name);
+          await showToast({ style: Toast.Style.Success, title: "Plan approved" });
+          if (props.onApproved) {
+            props.onApproved();
+          }
+        } catch (e) {
+          await showFailureToast(e, { title: "Failed to approve plan" });
+        }
+      }}
+    />
+  );
+}
+
+function DeclinePlanAction(props: { session: Session; mutate: () => Promise<void> }) {
+  return (
+    <Action.Push
+      title="Decline Plan"
+      icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
+      target={<DeclinePlanForm session={props.session} mutate={props.mutate} />}
+    />
+  );
+}
+
 function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> }) {
   const { pop } = useNavigation();
   const { handleSubmit, itemProps } = useForm<{ reason: string }>({
@@ -89,7 +120,7 @@ function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> 
   );
 }
 
-function SessionConversation(props: { session: Session }) {
+function SessionConversation(props: { session: Session; mutate: () => Promise<void> }) {
   const { data, isLoading } = useSessionActivities(props.session.name);
   const [filter, setFilter] = useCachedState("activityFilter", "all");
 
@@ -135,7 +166,9 @@ function SessionConversation(props: { session: Session }) {
                 <Action.Push
                   title="View Plan"
                   icon={Icon.List}
-                  target={<PlanDetailView plan={activity.planGenerated.plan} />}
+                  target={
+                    <PlanDetailView plan={activity.planGenerated.plan} session={props.session} mutate={props.mutate} />
+                  }
                 />
                 <Action.CopyToClipboard
                   title="Copy Plan as Markdown"
@@ -216,8 +249,9 @@ function getActivityMarkdown(activity: Activity, options: { includeFullArtifacts
   return content;
 }
 
-function PlanDetailView(props: { plan: Plan }) {
-  const { plan } = props;
+function PlanDetailView(props: { plan: Plan; session: Session; mutate: () => Promise<void> }) {
+  const { plan, session, mutate } = props;
+  const { pop } = useNavigation();
 
   return (
     <List navigationTitle={`Plan (${plan.steps.length} steps)`} isShowingDetail>
@@ -243,12 +277,26 @@ function PlanDetailView(props: { plan: Plan }) {
           }
           actions={
             <ActionPanel>
-              <Action.CopyToClipboard
-                title="Copy Step Title"
-                content={step.title}
-                shortcut={Keyboard.Shortcut.Common.Copy}
-              />
-              <Action.CopyToClipboard title="Copy Step Description" content={step.description || ""} />
+              {session.state === SessionState.AWAITING_PLAN_APPROVAL && (
+                <ActionPanel.Section>
+                  <ApprovePlanAction
+                    session={session}
+                    onApproved={() => {
+                      mutate();
+                      pop();
+                    }}
+                  />
+                  <DeclinePlanAction session={session} mutate={mutate} />
+                </ActionPanel.Section>
+              )}
+              <ActionPanel.Section>
+                <Action.CopyToClipboard
+                  title="Copy Step Title"
+                  content={step.title}
+                  shortcut={Keyboard.Shortcut.Common.Copy}
+                />
+                <Action.CopyToClipboard title="Copy Step Description" content={step.description || ""} />
+              </ActionPanel.Section>
             </ActionPanel>
           }
         />
@@ -309,6 +357,7 @@ function SessionListItem(props: {
               <Action
                 title="View Plan"
                 icon={Icon.List}
+                shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
                 onAction={async () => {
                   try {
                     await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
@@ -316,7 +365,13 @@ function SessionListItem(props: {
                     // Find the latest PlanGenerated activity
                     const planActivity = [...activities].reverse().find((a) => a.planGenerated);
                     if (planActivity?.planGenerated) {
-                      push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
+                      push(
+                        <PlanDetailView
+                          plan={planActivity.planGenerated.plan}
+                          session={props.session}
+                          mutate={props.mutate}
+                        />,
+                      );
                     } else {
                       await showToast({ style: Toast.Style.Failure, title: "No plan found" });
                     }
@@ -325,25 +380,8 @@ function SessionListItem(props: {
                   }
                 }}
               />
-              <Action
-                title="Approve Plan"
-                icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
-                onAction={async () => {
-                  try {
-                    await showToast({ style: Toast.Style.Animated, title: "Approving plan" });
-                    await approvePlan(props.session.name);
-                    await showToast({ style: Toast.Style.Success, title: "Plan approved" });
-                    await props.mutate();
-                  } catch (e) {
-                    await showFailureToast(e, { title: "Failed to approve plan" });
-                  }
-                }}
-              />
-              <Action.Push
-                title="Decline Plan"
-                icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
-                target={<DeclinePlanForm session={props.session} mutate={props.mutate} />}
-              />
+              <ApprovePlanAction session={props.session} onApproved={props.mutate} />
+              <DeclinePlanAction session={props.session} mutate={props.mutate} />
             </ActionPanel.Section>
           )}
           <ActionPanel.Section>
@@ -396,7 +434,7 @@ function SessionListItem(props: {
             <Action.Push
               icon={Icon.Message}
               title="View Activities"
-              target={<SessionConversation session={props.session} />}
+              target={<SessionConversation session={props.session} mutate={props.mutate} />}
               shortcut={
                 {
                   macOS: { modifiers: ["cmd", "shift"], key: "v" },
