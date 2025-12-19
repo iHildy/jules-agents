@@ -15,7 +15,7 @@ import {
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
 import { approvePlan, sendMessage, useSessionActivities, useSessions } from "./jules";
-import { Activity, Session, SessionState } from "./types";
+import { Activity, Plan, Session, SessionState } from "./types";
 import {
   formatRepoName,
   formatSessionState,
@@ -71,6 +71,24 @@ function SessionConversation(props: { session: Session }) {
           title={getActivityTitle(activity)}
           subtitle={format(new Date(activity.createTime), "HH:mm")}
           detail={<List.Item.Detail markdown={getActivityMarkdown(activity)} />}
+          actions={
+            activity.planGenerated ? (
+              <ActionPanel>
+                <Action.Push
+                  title="View Plan"
+                  icon={Icon.List}
+                  target={<PlanDetailView plan={activity.planGenerated.plan} />}
+                />
+                <Action.CopyToClipboard
+                  title="Copy Plan as Markdown"
+                  content={activity.planGenerated.plan.steps
+                    .map((s, i) => `${i + 1}. **${s.title}**\n   ${s.description || ""}`)
+                    .join("\n\n")}
+                  shortcut={Keyboard.Shortcut.Common.Copy}
+                />
+              </ActionPanel>
+            ) : undefined
+          }
         />
       ))}
     </List>
@@ -92,9 +110,17 @@ function getActivityMarkdown(activity: Activity): string {
   let content = "";
   if (activity.userMessaged) content = activity.userMessaged.userMessage;
   else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage;
-  else if (activity.planGenerated)
-    content = "Plan generated with " + activity.planGenerated.plan.steps.length + " steps.";
-  else if (activity.progressUpdated) content = activity.progressUpdated.description;
+  else if (activity.planGenerated) {
+    const plan = activity.planGenerated.plan;
+    content = `**Plan with ${plan.steps.length} steps:**\n\n`;
+    const stepsToShow = plan.steps.slice(0, 4);
+    stepsToShow.forEach((step, i) => {
+      content += `${i + 1}. ${step.title}\n`;
+    });
+    if (plan.steps.length > 4) {
+      content += `\n_...and ${plan.steps.length - 4} more steps_`;
+    }
+  } else if (activity.progressUpdated) content = activity.progressUpdated.description;
   else if (activity.sessionFailed) content = activity.sessionFailed.reason;
   else content = activity.description || "";
 
@@ -118,6 +144,44 @@ function getActivityMarkdown(activity: Activity): string {
   }
 
   return content;
+}
+
+function PlanDetailView(props: { plan: Plan }) {
+  const { plan } = props;
+
+  return (
+    <List navigationTitle={`Plan (${plan.steps.length} steps)`} isShowingDetail>
+      <List.EmptyView title="No Steps" description="This plan has no steps" icon={Icon.Document} />
+      {plan.steps.map((step) => (
+        <List.Item
+          key={step.id}
+          title={`Step ${step.index + 1}: ${step.title}`}
+          accessories={[{ text: `#${step.index + 1}` }]}
+          detail={
+            <List.Item.Detail
+              markdown={`## ${step.title}\n\n${step.description || "_No description_"}`}
+              metadata={
+                <List.Item.Detail.Metadata>
+                  <List.Item.Detail.Metadata.Label title="Step" text={`${step.index + 1} of ${plan.steps.length}`} />
+                  <List.Item.Detail.Metadata.Label title="ID" text={step.id} />
+                </List.Item.Detail.Metadata>
+              }
+            />
+          }
+          actions={
+            <ActionPanel>
+              <Action.CopyToClipboard
+                title="Copy Step Title"
+                content={step.title}
+                shortcut={Keyboard.Shortcut.Common.Copy}
+              />
+              <Action.CopyToClipboard title="Copy Step Description" content={step.description || ""} />
+            </ActionPanel>
+          }
+        />
+      ))}
+    </List>
+  );
 }
 
 function SessionDetail(props: { session: Session }) {
