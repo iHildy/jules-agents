@@ -1,27 +1,27 @@
 import {
-    Action,
-    ActionPanel,
-    Color,
-    Form,
-    Icon,
-    Keyboard,
-    launchCommand,
-    LaunchType,
-    List,
-    showToast,
-    Toast,
-    useNavigation,
+  Action,
+  ActionPanel,
+  Color,
+  Form,
+  Icon,
+  Keyboard,
+  launchCommand,
+  LaunchType,
+  List,
+  showToast,
+  Toast,
+  useNavigation,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
-    formatRepoName,
-    formatSessionState,
-    getSessionAccessories,
-    getStatusIconForSession,
-    groupSessions,
+  formatRepoName,
+  formatSessionState,
+  getSessionAccessories,
+  getStatusIconForSession,
+  groupSessions,
 } from "./utils";
 
 function FollowupInstruction(props: { session: Session }) {
@@ -218,7 +218,10 @@ function PlanDetailView(props: { plan: Plan }) {
               markdown={`## ${step.title}\n\n${step.description || "_No description_"}`}
               metadata={
                 <List.Item.Detail.Metadata>
-                  <List.Item.Detail.Metadata.Label title="Step" text={`${(step.index ?? 0) + 1} of ${plan.steps.length}`} />
+                  <List.Item.Detail.Metadata.Label
+                    title="Step"
+                    text={`${(step.index ?? 0) + 1} of ${plan.steps.length}`}
+                  />
                   <List.Item.Detail.Metadata.Label title="ID" text={step.id} />
                 </List.Item.Detail.Metadata>
               }
