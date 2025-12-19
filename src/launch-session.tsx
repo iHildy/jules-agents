@@ -1,4 +1,15 @@
-import { Action, ActionPanel, AI, Form, getPreferenceValues, Icon, LaunchProps, open, showToast, Toast } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  AI,
+  Form,
+  getPreferenceValues,
+  Icon,
+  LaunchProps,
+  open,
+  showToast,
+  Toast,
+} from "@raycast/api";
 import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
 import { useState } from "react";
 import { BranchDropdown } from "./components/BranchDropdown";

@@ -1,6 +1,6 @@
 import { Color, Icon, launchCommand, LaunchType, List } from "@raycast/api";
 import { addDays, format, isToday, isYesterday, startOfToday } from "date-fns";
-import { Session, SessionState } from "./types";
+import { BashOutput, Session, SessionState } from "./types";
 
 export function getStatusIconForSession(session: Session) {
   let icon: List.Item.Props["icon"];
@@ -206,7 +206,36 @@ export function formatSessionTitle(session: Session, maxLength = 50): string {
 }
 
 export function formatPlanToMarkdown(plan: import("./types").Plan): string {
-  return plan.steps
-    .map((s) => `${(s.index ?? 0) + 1}. **${s.title}**\n   ${s.description || ""}`)
-    .join("\n\n");
+  return plan.steps.map((s) => `${(s.index ?? 0) + 1}. **${s.title}**\n   ${s.description || ""}`).join("\n\n");
+}
+
+export function formatBashOutputMarkdown(
+  bashOutput: BashOutput,
+  options: { includeFullOutput?: boolean } = { includeFullOutput: true },
+): string {
+  const exitCode = bashOutput.exitCode;
+  const isSuccess = exitCode === 0;
+
+  let exitCodeDisplay = "";
+  if (exitCode === undefined || exitCode === null) {
+    exitCodeDisplay = "N/A";
+  } else {
+    exitCodeDisplay = `${exitCode} ${isSuccess ? "✅" : "❌"}`;
+  }
+
+  let markdown = `
+**Command**: \`${bashOutput.command}\`
+
+**Exit Code**: ${exitCodeDisplay}
+`;
+
+  if (options.includeFullOutput) {
+    markdown += `
+~~~bash
+${bashOutput.output}
+~~~
+`;
+  }
+
+  return markdown;
 }

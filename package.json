@@ -84,6 +84,32 @@
       "type": "checkbox",
       "default": true,
       "required": false
+    },
+    {
+      "name": "defaultActivityFilter",
+      "title": "Default Activity Filter",
+      "description": "The default filter to apply to the activity list",
+      "type": "dropdown",
+      "data": [
+        {
+          "title": "All Activities",
+          "value": "all"
+        },
+        {
+          "title": "Conversation Only",
+          "value": "messages"
+        },
+        {
+          "title": "Results & Files Only",
+          "value": "artifacts"
+        },
+        {
+          "title": "Milestones Only",
+          "value": "hide-progress"
+        }
+      ],
+      "default": "all",
+      "required": false
     }
   ],
   "dependencies": {

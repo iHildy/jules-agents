@@ -5,6 +5,7 @@ import {
   Color,
   Detail,
   Form,
+  getPreferenceValues,
   Icon,
   Keyboard,
   launchCommand,
@@ -16,6 +17,7 @@ import {
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
+import { useState } from "react";
 import {
   CopyActivityLogAction,
   CopyIdAction,
@@ -28,9 +30,9 @@ import {
   CopyUrlAction,
 } from "./components/CopyActions";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
-import { Activity, Plan, Session, SessionState } from "./types";
+import { Activity, Plan, Preferences, Session, SessionState } from "./types";
 import {
-  formatPlanToMarkdown,
+  formatBashOutputMarkdown,
   formatRepoName,
   formatSessionState,
   formatSessionTitle,
@@ -38,6 +40,7 @@ import {
   getStatusIconForSession,
   groupSessions,
 } from "./utils";
+import ViewMedia from "./view-media";
 
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
@@ -135,7 +138,8 @@ function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> 
 
 function SessionConversation(props: { session: Session; mutate: () => Promise<void> }) {
   const { data, isLoading } = useSessionActivities(props.session.name);
-  const [filter, setFilter] = useCachedState("activityFilter", "all");
+  const { defaultActivityFilter } = getPreferenceValues<Preferences>();
+  const [filter, setFilter] = useState(defaultActivityFilter);
 
   const filteredData = data?.filter((activity) => {
     if (filter === "messages") {
@@ -166,9 +170,9 @@ function SessionConversation(props: { session: Session; mutate: () => Promise<vo
         <List.Dropdown tooltip="Filter Activities" value={filter} onChange={setFilter}>
           <List.Dropdown.Item title="All Activities" value="all" />
           <List.Dropdown.Section>
-            <List.Dropdown.Item title="Messages Only" value="messages" />
-            <List.Dropdown.Item title="Artifacts Only" value="artifacts" />
-            <List.Dropdown.Item title="Hide Progress Updates" value="hide-progress" />
+            <List.Dropdown.Item title="Conversation Only" value="messages" />
+            <List.Dropdown.Item title="Results & Files Only" value="artifacts" />
+            <List.Dropdown.Item title="Milestones Only" value="hide-progress" />
           </List.Dropdown.Section>
         </List.Dropdown>
       }
@@ -269,12 +273,9 @@ function getActivityMarkdown(
         }
       }
       if (artifact.bashOutput) {
-        content += `\n**Command**: \`${artifact.bashOutput.command}\`\n`;
-        if (options.includeFullArtifacts) {
-          content += "\n```\n" + artifact.bashOutput.output + "\n```\n";
-        } else {
-          content += "\n_Command output omitted_\n";
-        }
+        content += formatBashOutputMarkdown(artifact.bashOutput, {
+          includeFullOutput: options.includeFullArtifacts,
+        });
       }
     });
   }
@@ -285,8 +286,6 @@ function getActivityMarkdown(
 function PlanDetailView(props: { plan: Plan; session: Session; mutate: () => Promise<void> }) {
   const { plan, session, mutate } = props;
   const { pop } = useNavigation();
-
-  const planMarkdown = formatPlanToMarkdown(plan);
 
   return (
     <List navigationTitle={`Plan (${plan.steps.length} steps)`} isShowingDetail>
@@ -472,6 +471,12 @@ function SessionListItem(props: {
                   windows: { modifiers: ["ctrl", "shift"], key: "v" },
                 } as Keyboard.Shortcut
               }
+            />
+            <Action.Push
+              icon={Icon.Image}
+              title="View Media"
+              target={<ViewMedia session={props.session} />}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
             />
             <Action
               title="Summarize Session"

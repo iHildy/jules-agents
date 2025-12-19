@@ -173,4 +173,5 @@ export interface Preferences {
   julesApiKey: string;
   requirePlanApproval: boolean;
   autoCreatePR: boolean;
+  defaultActivityFilter: string;
 }
