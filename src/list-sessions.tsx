@@ -26,6 +26,7 @@ import {
   getStatusIconForSession,
   groupSessions,
 } from "./utils";
+import ViewMedia from "./view-media";
 
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
@@ -444,6 +445,12 @@ function SessionListItem(props: {
                   windows: { modifiers: ["ctrl", "shift"], key: "v" },
                 } as Keyboard.Shortcut
               }
+            />
+            <Action.Push
+              icon={Icon.Image}
+              title="View Media"
+              target={<ViewMedia session={props.session} />}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "m" }}
             />
             <Action
               title="Summarize Session"
