@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, getPreferenceValues, LaunchProps, open, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, AI, Form, getPreferenceValues, LaunchProps, open, showToast, Toast } from "@raycast/api";
 import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
 import { useState } from "react";
 import { BranchDropdown } from "./components/BranchDropdown";
@@ -25,7 +25,7 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
   const initialSource = props.launchContext?.source;
   const [selectedSource, setSelectedSource] = useState<Source | undefined>(undefined);
 
-  const { reset, focus, handleSubmit, itemProps } = useForm<Values>({
+  const { reset, focus, handleSubmit, itemProps, setValue } = useForm<Values>({
     validation: {
       prompt: FormValidation.Required,
       sourceId: FormValidation.Required,
@@ -90,6 +90,27 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Submit Task" onSubmit={handleSubmit} />
+          <Action
+            title="Improve Prompt"
+            icon={Icon.Wand}
+            onAction={async () => {
+              if (itemProps.prompt.value) {
+                try {
+                  const improvedPrompt = await AI.ask(
+                    `Refine the following instruction for a helpful AI software engineer named Jules. Return only the refined instruction, nothing else:\n\n${itemProps.prompt.value}`,
+                  );
+                  setValue("prompt", improvedPrompt);
+                } catch (e) {
+                  showFailureToast(e, { title: "Failed to improve prompt" });
+                }
+              } else {
+                showToast({
+                  style: Toast.Style.Failure,
+                  title: "Please enter a prompt first",
+                });
+              }
+            }}
+          />
         </ActionPanel>
       }
       isLoading={isLoadingSources}

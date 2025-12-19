@@ -51,7 +51,6 @@
       "refreshInterval": 5
     }
   ],
-
   "preferences": [
     {
       "name": "julesApiKey",
@@ -81,7 +80,7 @@
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.103.0",
+    "@raycast/api": "^1.104.1",
     "@raycast/utils": "^1.17.0",
     "date-fns": "^4.1.0",
     "image-size": "^2.0.2"
