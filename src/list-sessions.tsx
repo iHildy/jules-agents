@@ -89,15 +89,39 @@ function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> 
 
 function SessionConversation(props: { session: Session }) {
   const { data, isLoading } = useSessionActivities(props.session.name);
+  const [filter, setFilter] = useCachedState("activityFilter", "all");
+
+  const filteredData = data?.filter((activity) => {
+    if (filter === "messages") {
+      return activity.userMessaged || activity.agentMessaged;
+    }
+    if (filter === "artifacts") {
+      return activity.artifacts && activity.artifacts.length > 0;
+    }
+    if (filter === "hide-progress") {
+      return !activity.progressUpdated;
+    }
+    return true;
+  });
 
   return (
     <List
       isLoading={isLoading}
       isShowingDetail
       navigationTitle={`Activity: ${props.session.title || props.session.id}`}
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter Activities" value={filter} onChange={setFilter}>
+          <List.Dropdown.Item title="All Activities" value="all" />
+          <List.Dropdown.Section>
+            <List.Dropdown.Item title="Messages Only" value="messages" />
+            <List.Dropdown.Item title="Artifacts Only" value="artifacts" />
+            <List.Dropdown.Item title="Hide Progress Updates" value="hide-progress" />
+          </List.Dropdown.Section>
+        </List.Dropdown>
+      }
     >
       <List.EmptyView title="No Activity Yet" description="This session hasn't started yet" icon={Icon.SpeechBubble} />
-      {data?.map((activity) => (
+      {filteredData?.map((activity) => (
         <List.Item
           key={activity.id}
           title={getActivityTitle(activity)}
@@ -134,14 +158,14 @@ function getActivityTitle(activity: Activity): string {
   if (activity.planApproved) return "Plan Approved";
   if (activity.progressUpdated) return activity.progressUpdated.title || "Progress Update";
   if (activity.sessionCompleted) return "Session Completed";
-  if (activity.sessionFailed) return "Session Failed: " + activity.sessionFailed.reason;
+  if (activity.sessionFailed) return "Session Failed: " + (activity.sessionFailed.reason || "Unknown reason");
   return activity.description || "Activity";
 }
 
 function getActivityMarkdown(activity: Activity): string {
   let content = "";
-  if (activity.userMessaged) content = activity.userMessaged.userMessage;
-  else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage;
+  if (activity.userMessaged) content = activity.userMessaged.userMessage || "";
+  else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage || "";
   else if (activity.planGenerated) {
     const plan = activity.planGenerated.plan;
     content = `**Plan with ${plan.steps.length} steps:**\n\n`;
@@ -152,8 +176,8 @@ function getActivityMarkdown(activity: Activity): string {
     if (plan.steps.length > 4) {
       content += `\n_...and ${plan.steps.length - 4} more steps_`;
     }
-  } else if (activity.progressUpdated) content = activity.progressUpdated.description;
-  else if (activity.sessionFailed) content = activity.sessionFailed.reason;
+  } else if (activity.progressUpdated) content = activity.progressUpdated.description || "";
+  else if (activity.sessionFailed) content = activity.sessionFailed.reason || "";
   else content = activity.description || "";
 
   if (activity.artifacts && activity.artifacts.length > 0) {
