@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, getPreferenceValues, open, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, Form, getPreferenceValues, LaunchProps, open, showToast, Toast } from "@raycast/api";
 import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
 import { useState } from "react";
 import { BranchDropdown } from "./components/BranchDropdown";
@@ -15,9 +15,14 @@ type Values = {
   autoCreatePR?: boolean;
 };
 
-export default function Command() {
+interface LaunchContext {
+  source?: string;
+}
+
+export default function Command(props: LaunchProps<{ launchContext?: LaunchContext }>) {
   const preferences = getPreferenceValues<Preferences>();
   const { data: sources, isLoading: isLoadingSources } = useSources();
+  const initialSource = props.launchContext?.source;
   const [selectedSource, setSelectedSource] = useState<Source | undefined>(undefined);
 
   const { reset, focus, handleSubmit, itemProps } = useForm<Values>({
@@ -26,6 +31,7 @@ export default function Command() {
       sourceId: FormValidation.Required,
     },
     initialValues: {
+      sourceId: initialSource,
       requirePlanApproval: preferences.requirePlanApproval,
       autoCreatePR: preferences.autoCreatePR,
     },

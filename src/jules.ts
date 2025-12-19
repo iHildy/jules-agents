@@ -1,5 +1,5 @@
 import { getPreferenceValues } from "@raycast/api";
-import { useFetch, usePromise } from "@raycast/utils";
+import { useCachedPromise, useFetch } from "@raycast/utils";
 import { URLSearchParams } from "url";
 import { ListActivitiesResponse, ListSessionsResponse, ListSourcesResponse, Session, Source } from "./types";
 
@@ -175,6 +175,9 @@ async function fetchAllSources() {
   return allSources;
 }
 
-export function useSources() {
-  return usePromise(fetchAllSources);
+export function useSources(options?: { execute?: boolean }) {
+  return useCachedPromise(fetchAllSources, [], {
+    keepPreviousData: true,
+    execute: options?.execute ?? true,
+  });
 }

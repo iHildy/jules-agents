@@ -473,6 +473,12 @@ export default function Command() {
             shortcut={Keyboard.Shortcut.Common.New}
             onAction={() => launchCommand({ name: "launch-session", type: LaunchType.UserInitiated })}
           />
+          <Action
+            title="Refresh Sessions"
+            icon={Icon.ArrowClockwise}
+            shortcut={Keyboard.Shortcut.Common.Refresh}
+            onAction={mutate}
+          />
         </ActionPanel>
       }
     >
