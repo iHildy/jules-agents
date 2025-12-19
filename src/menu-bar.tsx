@@ -8,65 +8,128 @@ import {
   open,
   openCommandPreferences,
   showHUD,
+  showToast,
+  Toast,
 } from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
-import { useSessions } from "./jules";
+import { useEffect, useState } from "react";
+import { approvePlan, fetchSessionActivities, useSessions } from "./jules";
 import { useSessionNotifications } from "./notification";
-import { Session } from "./types";
+import { Session, SessionState } from "./types";
 import { formatPrSubtitle, formatPrTitle, formatRepoName, getStatusIconSimpleForSession, groupSessions } from "./utils";
 
-function AlternateSessionMenuBarItem({ session }: { session: Session }) {
-  const prUrl = session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
+function SessionMenuBarItemWithPlanSteps({ session }: { session: Session }) {
+  const [planSteps, setPlanSteps] = useState<number | undefined>();
 
-  if (!prUrl) {
-    return null;
-  }
-
-  return (
-    <MenuBarExtra.Item
-      key={`${session.id}-pr`}
-      icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
-      title={formatPrTitle(prUrl)}
-      subtitle={formatPrSubtitle(prUrl)}
-      onAction={async (event) => {
-        switch (event.type) {
-          case "left-click":
-            await open(prUrl);
-            break;
-          case "right-click":
-            await Clipboard.copy(prUrl);
-            await showHUD("Copied PR URL to clipboard");
-            break;
+  useEffect(() => {
+    async function getPlanSteps() {
+      if (session.state === SessionState.PLANNING || session.state === SessionState.AWAITING_PLAN_APPROVAL) {
+        try {
+          const activities = await fetchSessionActivities(session.name);
+          const sortedActivities = activities.sort(
+            (a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime(),
+          );
+          const planActivity = sortedActivities.find((a) => a.planGenerated);
+          setPlanSteps(planActivity?.planGenerated?.plan?.steps?.length);
+        } catch (e) {
+          // Silently fail, we don't want to show toasts from the menu bar item
+          console.error(e);
         }
-      }}
-    />
-  );
+      }
+    }
+    getPlanSteps();
+  }, [session]);
+
+  return <SessionMenuBarItem session={session} planSteps={planSteps} />;
 }
 
-function SessionMenuBarItem({ session }: { session: Session }) {
+function SessionMenuBarItem({ session, planSteps }: { session: Session; planSteps?: number }) {
   const rawTitle = session.title || session.id;
   const title = rawTitle.length > 50 ? rawTitle.substring(0, 50) + "..." : rawTitle;
 
+  const prUrl = session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
+
+  const runningStates = [
+    SessionState.PLANNING,
+    SessionState.AWAITING_PLAN_APPROVAL,
+    SessionState.IN_PROGRESS,
+    SessionState.AWAITING_USER_FEEDBACK,
+  ];
+
   return (
-    <MenuBarExtra.Item
+    <MenuBarExtra.Submenu
       key={session.id}
       icon={getStatusIconSimpleForSession(session)}
       title={title}
       subtitle={formatRepoName(session.sourceContext.source)}
-      tooltip={session.prompt}
-      alternate={<AlternateSessionMenuBarItem session={session} />}
-      onAction={async (event) => {
-        switch (event.type) {
-          case "left-click":
-            await open(session.url);
-            break;
-          case "right-click":
-            await Clipboard.copy(session.url);
-            await showHUD("Copied URL to clipboard");
-            break;
-        }
-      }}
-    />
+    >
+      <MenuBarExtra.Item
+        title="Open Session"
+        icon={Icon.Globe}
+        tooltip={session.prompt + (planSteps ? `\n\nPlan steps: ${planSteps}` : "")}
+        onAction={async (event) => {
+          switch (event.type) {
+            case "left-click":
+              await open(session.url);
+              break;
+            case "right-click":
+              await Clipboard.copy(session.url);
+              await showHUD("Copied URL to clipboard");
+              break;
+          }
+        }}
+      />
+      {prUrl && (
+        <MenuBarExtra.Item
+          icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
+          title={formatPrTitle(prUrl)}
+          subtitle={formatPrSubtitle(prUrl)}
+          onAction={async (event) => {
+            switch (event.type) {
+              case "left-click":
+                await open(prUrl);
+                break;
+              case "right-click":
+                await Clipboard.copy(prUrl);
+                await showHUD("Copied PR URL to clipboard");
+                break;
+            }
+          }}
+        />
+      )}
+      {session.state === SessionState.AWAITING_PLAN_APPROVAL && (
+        <MenuBarExtra.Item
+          title="Approve Plan"
+          icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
+          onAction={async () => {
+            try {
+              await showToast({ style: Toast.Style.Animated, title: "Approving plan" });
+              await approvePlan(session.name);
+              await showToast({ style: Toast.Style.Success, title: "Plan approved" });
+            } catch (e) {
+              await showFailureToast(e, { title: "Failed to approve plan" });
+            }
+          }}
+        />
+      )}
+      {runningStates.includes(session.state) && (
+        <MenuBarExtra.Item
+          title="Send Quick Message"
+          icon={Icon.SpeechBubble}
+          onAction={async () => {
+            try {
+              await launchCommand({
+                name: "send-quick-message",
+                type: LaunchType.UserInitiated,
+                context: { session },
+              });
+            } catch (e) {
+              await showFailureToast(e, { title: "Failed to open quick message form" });
+            }
+          }}
+        />
+      )}
+    </MenuBarExtra.Submenu>
   );
 }
 
@@ -81,7 +144,7 @@ export default function MenuBar() {
       {today.length > 0 && (
         <MenuBarExtra.Section title="Today">
           {today.map((session) => (
-            <SessionMenuBarItem key={session.id} session={session} />
+            <SessionMenuBarItemWithPlanSteps key={session.id} session={session} />
           ))}
         </MenuBarExtra.Section>
       )}
@@ -89,7 +152,7 @@ export default function MenuBar() {
       {yesterday.length > 0 && (
         <MenuBarExtra.Section title="Yesterday">
           {yesterday.map((session) => (
-            <SessionMenuBarItem key={session.id} session={session} />
+            <SessionMenuBarItemWithPlanSteps key={session.id} session={session} />
           ))}
         </MenuBarExtra.Section>
       )}
@@ -97,7 +160,7 @@ export default function MenuBar() {
       {thisWeek.length > 0 && (
         <MenuBarExtra.Section title="This Week">
           {thisWeek.map((session) => (
-            <SessionMenuBarItem key={session.id} session={session} />
+            <SessionMenuBarItemWithPlanSteps key={session.id} session={session} />
           ))}
         </MenuBarExtra.Section>
       )}
