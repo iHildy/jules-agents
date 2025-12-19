@@ -36,6 +36,13 @@
       "mode": "view"
     },
     {
+      "name": "list-sources",
+      "title": "List Sources",
+      "subtitle": "Jules Agents",
+      "description": "Browse all your available sources.",
+      "mode": "view"
+    },
+    {
       "name": "menu-bar",
       "title": "Menu Bar Overview",
       "subtitle": "Jules Agents",

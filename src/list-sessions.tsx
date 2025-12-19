@@ -91,15 +91,39 @@ function DeclinePlanForm(props: { session: Session; mutate: () => Promise<void> 
 
 function SessionConversation(props: { session: Session }) {
   const { data, isLoading } = useSessionActivities(props.session.name);
+  const [filter, setFilter] = useCachedState("activityFilter", "all");
+
+  const filteredData = data?.filter((activity) => {
+    if (filter === "messages") {
+      return activity.userMessaged || activity.agentMessaged;
+    }
+    if (filter === "artifacts") {
+      return activity.artifacts && activity.artifacts.length > 0;
+    }
+    if (filter === "hide-progress") {
+      return !activity.progressUpdated;
+    }
+    return true;
+  });
 
   return (
     <List
       isLoading={isLoading}
       isShowingDetail
       navigationTitle={`Activity: ${props.session.title || props.session.id}`}
+      searchBarAccessory={
+        <List.Dropdown tooltip="Filter Activities" value={filter} onChange={setFilter}>
+          <List.Dropdown.Item title="All Activities" value="all" />
+          <List.Dropdown.Section>
+            <List.Dropdown.Item title="Messages Only" value="messages" />
+            <List.Dropdown.Item title="Artifacts Only" value="artifacts" />
+            <List.Dropdown.Item title="Hide Progress Updates" value="hide-progress" />
+          </List.Dropdown.Section>
+        </List.Dropdown>
+      }
     >
       <List.EmptyView title="No Activity Yet" description="This session hasn't started yet" icon={Icon.SpeechBubble} />
-      {data?.map((activity) => (
+      {filteredData?.map((activity) => (
         <List.Item
           key={activity.id}
           title={getActivityTitle(activity)}
@@ -136,14 +160,14 @@ function getActivityTitle(activity: Activity): string {
   if (activity.planApproved) return "Plan Approved";
   if (activity.progressUpdated) return activity.progressUpdated.title || "Progress Update";
   if (activity.sessionCompleted) return "Session Completed";
-  if (activity.sessionFailed) return "Session Failed: " + activity.sessionFailed.reason;
+  if (activity.sessionFailed) return "Session Failed: " + (activity.sessionFailed.reason || "Unknown reason");
   return activity.description || "Activity";
 }
 
 function getActivityMarkdown(activity: Activity, options: { includeFullArtifacts?: boolean } = { includeFullArtifacts: true }): string {
   let content = "";
-  if (activity.userMessaged) content = activity.userMessaged.userMessage;
-  else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage;
+  if (activity.userMessaged) content = activity.userMessaged.userMessage || "";
+  else if (activity.agentMessaged) content = activity.agentMessaged.agentMessage || "";
   else if (activity.planGenerated) {
     const plan = activity.planGenerated.plan;
     content = `**Plan with ${plan.steps.length} steps:**\n\n`;
@@ -154,8 +178,8 @@ function getActivityMarkdown(activity: Activity, options: { includeFullArtifacts
     if (plan.steps.length > 4) {
       content += `\n_...and ${plan.steps.length - 4} more steps_`;
     }
-  } else if (activity.progressUpdated) content = activity.progressUpdated.description;
-  else if (activity.sessionFailed) content = activity.sessionFailed.reason;
+  } else if (activity.progressUpdated) content = activity.progressUpdated.description || "";
+  else if (activity.sessionFailed) content = activity.sessionFailed.reason || "";
   else content = activity.description || "";
 
   if (activity.artifacts && activity.artifacts.length > 0) {
@@ -201,14 +225,17 @@ function PlanDetailView(props: { plan: Plan }) {
       {plan.steps.map((step) => (
         <List.Item
           key={step.id}
-          title={`Step ${step.index + 1}: ${step.title}`}
-          accessories={[{ text: `#${step.index + 1}` }]}
+          title={step.title}
+          accessories={[{ text: `#${(step.index ?? 0) + 1}` }]}
           detail={
             <List.Item.Detail
               markdown={`## ${step.title}\n\n${step.description || "_No description_"}`}
               metadata={
                 <List.Item.Detail.Metadata>
-                  <List.Item.Detail.Metadata.Label title="Step" text={`${step.index + 1} of ${plan.steps.length}`} />
+                  <List.Item.Detail.Metadata.Label
+                    title="Step"
+                    text={`${(step.index ?? 0) + 1} of ${plan.steps.length}`}
+                  />
                   <List.Item.Detail.Metadata.Label title="ID" text={step.id} />
                 </List.Item.Detail.Metadata>
               }
@@ -243,20 +270,8 @@ function SessionDetail(props: { session: Session }) {
           {session.title && <List.Item.Detail.Metadata.Label title="Title" text={session.title} />}
           <List.Item.Detail.Metadata.Label title="State" text={formatSessionState(session.state)} />
           <List.Item.Detail.Metadata.Separator />
-          {prUrl && (
-            <>
-              <List.Item.Detail.Metadata.Link title="Pull Request" text={prUrl} target={prUrl} />
-              <List.Item.Detail.Metadata.Separator />
-            </>
-          )}
+          {prUrl && <List.Item.Detail.Metadata.Link title="Pull Request" text={prUrl} target={prUrl} />}
           <List.Item.Detail.Metadata.Label title="Repository" text={formatRepoName(session.sourceContext.source)} />
-          <List.Item.Detail.Metadata.Separator />
-          <List.Item.Detail.Metadata.Label
-            title="Created"
-            text={format(new Date(session.createTime), "EEEE d MMMM yyyy 'at' HH:mm")}
-          />
-          <List.Item.Detail.Metadata.Separator />
-          <List.Item.Detail.Metadata.Label title="ID" text={session.id} />
         </List.Item.Detail.Metadata>
       }
     />
@@ -289,24 +304,27 @@ function SessionListItem(props: {
       detail={<SessionDetail session={props.session} />}
       actions={
         <ActionPanel>
-          <ActionPanel.Section>
-            <Action.OpenInBrowser url={props.session.url} title="Open in Browser" />
-            {prUrl && (
-              <Action.OpenInBrowser
-                icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
-                title="Open Pull Request"
-                url={prUrl}
-                shortcut={
-                  {
-                    macOS: { modifiers: ["cmd", "shift"], key: "return" },
-                    windows: { modifiers: ["ctrl", "shift"], key: "return" },
-                  } as Keyboard.Shortcut
-                }
-              />
-            )}
-          </ActionPanel.Section>
           {props.session.state === SessionState.AWAITING_PLAN_APPROVAL && (
             <ActionPanel.Section>
+              <Action
+                title="View Plan"
+                icon={Icon.List}
+                onAction={async () => {
+                  try {
+                    await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
+                    const activities = await fetchSessionActivities(props.session.name);
+                    // Find the latest PlanGenerated activity
+                    const planActivity = [...activities].reverse().find((a) => a.planGenerated);
+                    if (planActivity?.planGenerated) {
+                      push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
+                    } else {
+                      await showToast({ style: Toast.Style.Failure, title: "No plan found" });
+                    }
+                  } catch (e) {
+                    await showFailureToast(e, { title: "Failed to load plan" });
+                  }
+                }}
+              />
               <Action
                 title="Approve Plan"
                 icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
@@ -326,28 +344,24 @@ function SessionListItem(props: {
                 icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
                 target={<DeclinePlanForm session={props.session} mutate={props.mutate} />}
               />
-              <Action
-                title="View Plan"
-                icon={Icon.List}
-                shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
-                onAction={async () => {
-                  try {
-                    await showToast({ style: Toast.Style.Animated, title: "Fetching plan" });
-                    const activities = await fetchSessionActivities(props.session.name);
-                    // Find the latest PlanGenerated activity
-                    const planActivity = [...activities].reverse().find((a) => a.planGenerated);
-                    if (planActivity?.planGenerated) {
-                      push(<PlanDetailView plan={planActivity.planGenerated.plan} />);
-                    } else {
-                      await showToast({ style: Toast.Style.Failure, title: "No plan found" });
-                    }
-                  } catch (e) {
-                    await showFailureToast(e, { title: "Failed to load plan" });
-                  }
-                }}
-              />
             </ActionPanel.Section>
           )}
+          <ActionPanel.Section>
+            <Action.OpenInBrowser url={props.session.url} title="Open in Browser" />
+            {prUrl && (
+              <Action.OpenInBrowser
+                icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
+                title="Open Pull Request"
+                url={prUrl}
+                shortcut={
+                  {
+                    macOS: { modifiers: ["cmd", "shift"], key: "return" },
+                    windows: { modifiers: ["ctrl", "shift"], key: "return" },
+                  } as Keyboard.Shortcut
+                }
+              />
+            )}
+          </ActionPanel.Section>
           <ActionPanel.Section title="Edit">
             <Action
               title="Launch Session"
@@ -518,6 +532,12 @@ export default function Command() {
             icon={Icon.PlusCircle}
             shortcut={Keyboard.Shortcut.Common.New}
             onAction={() => launchCommand({ name: "launch-session", type: LaunchType.UserInitiated })}
+          />
+          <Action
+            title="Refresh Sessions"
+            icon={Icon.ArrowClockwise}
+            shortcut={Keyboard.Shortcut.Common.Refresh}
+            onAction={mutate}
           />
         </ActionPanel>
       }

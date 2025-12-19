@@ -1,8 +1,10 @@
-import { Action, ActionPanel, AI, Form, getPreferenceValues, Icon, open, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, AI, Form, getPreferenceValues, LaunchProps, open, showToast, Toast } from "@raycast/api";
 import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
+import { useState } from "react";
+import { BranchDropdown } from "./components/BranchDropdown";
 import { SourceDropdown } from "./components/SourceDropdown";
 import { createSession, useSources } from "./jules";
-import { AutomationMode, Preferences } from "./types";
+import { AutomationMode, Preferences, Source } from "./types";
 import { refreshMenuBar } from "./utils";
 
 type Values = {
@@ -13,9 +15,15 @@ type Values = {
   autoCreatePR?: boolean;
 };
 
-export default function Command() {
+interface LaunchContext {
+  source?: string;
+}
+
+export default function Command(props: LaunchProps<{ launchContext?: LaunchContext }>) {
   const preferences = getPreferenceValues<Preferences>();
   const { data: sources, isLoading: isLoadingSources } = useSources();
+  const initialSource = props.launchContext?.source;
+  const [selectedSource, setSelectedSource] = useState<Source | undefined>(undefined);
 
   const { reset, focus, handleSubmit, itemProps, setValue } = useForm<Values>({
     validation: {
@@ -23,6 +31,7 @@ export default function Command() {
       sourceId: FormValidation.Required,
     },
     initialValues: {
+      sourceId: initialSource,
       requirePlanApproval: preferences.requirePlanApproval,
       autoCreatePR: preferences.autoCreatePR,
     },
@@ -111,16 +120,14 @@ export default function Command() {
       <Form.Separator />
 
       <SourceDropdown
-        onSelectionChange={(value) => itemProps.sourceId.onChange?.(value)}
+        onSelectionChange={(value) => {
+          itemProps.sourceId.onChange?.(value);
+          setSelectedSource(sources?.find((s) => s.name === value));
+        }}
         value={itemProps.sourceId.value}
       />
 
-      <Form.TextField
-        title="Starting Branch"
-        placeholder="main"
-        info="The branch to base the feature branch on. If not provided, the default branch will be used."
-        {...itemProps.startingBranch}
-      />
+      <BranchDropdown selectedSource={selectedSource} itemProps={itemProps} />
 
       <Form.Separator />
 
