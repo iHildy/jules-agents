@@ -1,10 +1,10 @@
 
-import { Action, ActionPanel, Grid, Icon, showToast, Toast } from "@raycast/api";
-import { useSessionActivities } from "./jules";
-import { Session, Media } from "./types";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { Action, ActionPanel, Detail, Grid, Icon, showInFinder, showToast, Toast } from "@raycast/api";
+import { mkdir, writeFile } from "fs/promises";
 import { homedir } from "os";
+import { join } from "path";
+import { useSessionActivities } from "./jules";
+import { Media, Session } from "./types";
 
 const mimeTypeToExtension: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -30,6 +30,53 @@ async function saveMediaToDownloads(media: Media, session: Session): Promise<str
   return filepath;
 }
 
+function SaveMediaAction(props: { media: Media; session: Session }) {
+  return (
+    <Action
+      title="Save to Downloads"
+      icon={Icon.Download}
+      shortcut={{ modifiers: ["cmd"], key: "s" }}
+      onAction={async () => {
+        const toast = await showToast({
+          style: Toast.Style.Animated,
+          title: "Saving media to downloads...",
+        });
+        try {
+          const savedPath = await saveMediaToDownloads(props.media, props.session);
+          toast.style = Toast.Style.Success;
+          toast.title = "Media saved to downloads";
+          toast.message = savedPath;
+          toast.primaryAction = {
+            title: "Open in Finder",
+            onAction: () => {
+              showInFinder(savedPath);
+            },
+          };
+        } catch (error) {
+          toast.style = Toast.Style.Failure;
+          toast.title = "Failed to save media";
+          toast.message = error instanceof Error ? error.message : String(error);
+        }
+      }}
+    />
+  );
+}
+
+function LargeMediaView(props: { media: Media; index: number; session: Session }) {
+  const markdown = `![Artifact ${props.index + 1}](data:${props.media.mimeType};base64,${props.media.data})`;
+  return (
+    <Detail
+      markdown={markdown}
+      navigationTitle={`Artifact ${props.index + 1}`}
+      actions={
+        <ActionPanel>
+          <SaveMediaAction media={props.media} session={props.session} />
+        </ActionPanel>
+      }
+    />
+  );
+}
+
 export default function ViewMedia(props: { session: Session }) {
   const { data: activities, isLoading } = useSessionActivities(props.session.name);
 
@@ -39,43 +86,29 @@ export default function ViewMedia(props: { session: Session }) {
       .map((artifact) => artifact.media)
       .filter((media): media is Media => !!media) ?? [];
 
-  if (!isLoading && mediaArtifacts.length === 0) {
-    return <Grid.EmptyView title="No Media Found" description="This session has no media artifacts." />;
-  }
-
   return (
     <Grid isLoading={isLoading} navigationTitle="Media Artifacts">
-      {mediaArtifacts.map((media, index) => (
-        <Grid.Item
-          key={index}
-          content={{ source: `data:${media.mimeType};base64,${media.data}` }}
-          title={`Artifact ${index + 1}`}
-          actions={
-            <ActionPanel>
-              <Action
-                title="Save to Downloads"
-                icon={Icon.Download}
-                onAction={async () => {
-                  const toast = await showToast({
-                    style: Toast.Style.Animated,
-                    title: "Saving media to downloads...",
-                  });
-                  try {
-                    const savedPath = await saveMediaToDownloads(media, props.session);
-                    toast.style = Toast.Style.Success;
-                    toast.title = "Media saved to downloads";
-                    toast.message = savedPath;
-                  } catch (error) {
-                    toast.style = Toast.Style.Failure;
-                    toast.title = "Failed to save media";
-                    toast.message = error instanceof Error ? error.message : String(error);
-                  }
-                }}
-              />
-            </ActionPanel>
-          }
-        />
-      ))}
+      {mediaArtifacts.length === 0 && !isLoading ? (
+        <Grid.EmptyView title="No Media Found" description="This session has no media artifacts." />
+      ) : (
+        mediaArtifacts.map((media, index) => (
+          <Grid.Item
+            key={index}
+            content={{ source: `data:${media.mimeType};base64,${media.data}` }}
+            title={`Artifact ${index + 1}`}
+            actions={
+              <ActionPanel>
+                <Action.Push
+                  title="View Large"
+                  icon={Icon.Maximize}
+                  target={<LargeMediaView media={media} index={index} session={props.session} />}
+                />
+                <SaveMediaAction media={media} session={props.session} />
+              </ActionPanel>
+            }
+          />
+        ))
+      )}
     </Grid>
   );
 }
