@@ -204,3 +204,9 @@ export function formatSessionTitle(session: Session, maxLength = 50): string {
   const rawTitle = (session.title || session.id).split("\n")[0].trim();
   return rawTitle.length > maxLength ? rawTitle.substring(0, maxLength) + "..." : rawTitle;
 }
+
+export function formatPlanToMarkdown(plan: import("./types").Plan): string {
+  return plan.steps
+    .map((s) => `${(s.index ?? 0) + 1}. **${s.title}**\n   ${s.description || ""}`)
+    .join("\n\n");
+}

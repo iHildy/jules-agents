@@ -20,6 +20,7 @@ import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities,
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
   formatRepoName,
+  formatPlanToMarkdown,
   formatSessionState,
   formatSessionTitle,
   getSessionAccessories,
@@ -138,11 +139,22 @@ function SessionConversation(props: { session: Session; mutate: () => Promise<vo
     return true;
   });
 
+  const fullActivityLog = data?.map((a) => getActivityMarkdown(a)).join("\n\n---\n\n") || "";
+
   return (
     <List
       isLoading={isLoading}
       isShowingDetail
       navigationTitle={`Activity: ${props.session.title || props.session.id}`}
+      actions={
+        <ActionPanel>
+          <Action.CopyToClipboard
+            title="Copy Activity Log"
+            content={fullActivityLog}
+            shortcut={Keyboard.Shortcut.Common.Copy}
+          />
+        </ActionPanel>
+      }
       searchBarAccessory={
         <List.Dropdown tooltip="Filter Activities" value={filter} onChange={setFilter}>
           <List.Dropdown.Item title="All Activities" value="all" />
@@ -161,26 +173,44 @@ function SessionConversation(props: { session: Session; mutate: () => Promise<vo
           title={getActivityTitle(activity)}
           subtitle={format(new Date(activity.createTime), "HH:mm")}
           detail={<List.Item.Detail markdown={getActivityMarkdown(activity)} />}
-          actions={
-            activity.planGenerated ? (
+          actions={(() => {
+            const messageContent = activity.userMessaged?.userMessage || activity.agentMessaged?.agentMessage;
+            if (!activity.planGenerated && !messageContent) return undefined;
+
+            return (
               <ActionPanel>
-                <Action.Push
-                  title="View Plan"
-                  icon={Icon.List}
-                  target={
-                    <PlanDetailView plan={activity.planGenerated.plan} session={props.session} mutate={props.mutate} />
-                  }
-                />
-                <Action.CopyToClipboard
-                  title="Copy Plan as Markdown"
-                  content={activity.planGenerated.plan.steps
-                    .map((s, i) => `${i + 1}. **${s.title}**\n   ${s.description || ""}`)
-                    .join("\n\n")}
-                  shortcut={Keyboard.Shortcut.Common.Copy}
-                />
+                {activity.planGenerated && (
+                  <ActionPanel.Section>
+                    <Action.Push
+                      title="View Plan"
+                      icon={Icon.List}
+                      target={
+                        <PlanDetailView
+                          plan={activity.planGenerated.plan}
+                          session={props.session}
+                          mutate={props.mutate}
+                        />
+                      }
+                    />
+                    <Action.CopyToClipboard
+                      title="Copy Plan as Markdown"
+                  content={formatPlanToMarkdown(activity.planGenerated.plan)}
+                      shortcut={Keyboard.Shortcut.Common.Copy}
+                    />
+                  </ActionPanel.Section>
+                )}
+                {messageContent && (
+                  <ActionPanel.Section>
+                    <Action.CopyToClipboard
+                      title="Copy Message"
+                      content={messageContent}
+                      shortcut={Keyboard.Shortcut.Common.Copy}
+                    />
+                  </ActionPanel.Section>
+                )}
               </ActionPanel>
-            ) : undefined
-          }
+            );
+          })()}
         />
       ))}
     </List>
@@ -257,6 +287,8 @@ function PlanDetailView(props: { plan: Plan; session: Session; mutate: () => Pro
   const { plan, session, mutate } = props;
   const { pop } = useNavigation();
 
+  const planMarkdown = formatPlanToMarkdown(plan);
+
   return (
     <List navigationTitle={`Plan (${plan.steps.length} steps)`} isShowingDetail>
       <List.EmptyView title="No Steps" description="This plan has no steps" icon={Icon.Document} />
@@ -300,6 +332,7 @@ function PlanDetailView(props: { plan: Plan; session: Session; mutate: () => Pro
                   shortcut={Keyboard.Shortcut.Common.Copy}
                 />
                 <Action.CopyToClipboard title="Copy Step Description" content={step.description || ""} />
+                <Action.CopyToClipboard title="Copy Plan as Markdown" content={planMarkdown} />
               </ActionPanel.Section>
             </ActionPanel>
           }
@@ -502,6 +535,8 @@ function SessionListItem(props: {
               content={props.session.id}
               shortcut={Keyboard.Shortcut.Common.CopyName}
             />
+            <Action.CopyToClipboard title="Copy Prompt" content={props.session.prompt} />
+            {prUrl && <Action.CopyToClipboard title="Copy PR URL" content={prUrl} />}
           </ActionPanel.Section>
         </ActionPanel>
       }
