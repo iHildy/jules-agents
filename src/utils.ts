@@ -77,6 +77,13 @@ export function getSessionAccessories(
 ) {
   const accessories: List.Item.Props["accessories"] = [];
 
+  if (session.outputs?.some((o) => o.pullRequest)) {
+    accessories.push({
+      icon: { source: Icon.GitPullRequest, tintColor: Color.PrimaryText },
+      tooltip: "Pull Request created",
+    });
+  }
+
   if (!opts.hideCreateTime && session.createTime) {
     const createTime = new Date(session.createTime);
     accessories.push({
