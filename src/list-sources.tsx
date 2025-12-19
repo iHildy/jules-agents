@@ -1,4 +1,5 @@
 import { Action, ActionPanel, Color, Icon, Keyboard, launchCommand, LaunchType, List } from "@raycast/api";
+import { CopyIdAction } from "./components/CopyActions";
 import { useSources } from "./jules";
 import { formatRepoName } from "./utils";
 
@@ -50,7 +51,7 @@ export default function Command() {
                     })
                   }
                 />
-                <Action.CopyToClipboard title="Copy Source Name" content={source.name} />
+                <CopyIdAction id={source.name} title="Copy Source Name" />
                 <Action
                   title="Refresh Sources"
                   icon={Icon.ArrowClockwise}

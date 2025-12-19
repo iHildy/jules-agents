@@ -16,11 +16,22 @@ import {
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
+import {
+  CopyActivityLogAction,
+  CopyIdAction,
+  CopyMessageAction,
+  CopyPlanMarkdownAction,
+  CopyPromptAction,
+  CopyPrUrlAction,
+  CopyStepDescriptionAction,
+  CopySummaryAction,
+  CopyUrlAction,
+} from "./components/CopyActions";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Plan, Session, SessionState } from "./types";
 import {
-  formatRepoName,
   formatPlanToMarkdown,
+  formatRepoName,
   formatSessionState,
   formatSessionTitle,
   getSessionAccessories,
@@ -148,11 +159,7 @@ function SessionConversation(props: { session: Session; mutate: () => Promise<vo
       navigationTitle={`Activity: ${props.session.title || props.session.id}`}
       actions={
         <ActionPanel>
-          <Action.CopyToClipboard
-            title="Copy Activity Log"
-            content={fullActivityLog}
-            shortcut={Keyboard.Shortcut.Common.Copy}
-          />
+          <CopyActivityLogAction content={fullActivityLog} />
         </ActionPanel>
       }
       searchBarAccessory={
@@ -192,20 +199,12 @@ function SessionConversation(props: { session: Session; mutate: () => Promise<vo
                         />
                       }
                     />
-                    <Action.CopyToClipboard
-                      title="Copy Plan as Markdown"
-                  content={formatPlanToMarkdown(activity.planGenerated.plan)}
-                      shortcut={Keyboard.Shortcut.Common.Copy}
-                    />
+                    <CopyPlanMarkdownAction plan={activity.planGenerated.plan} />
                   </ActionPanel.Section>
                 )}
                 {messageContent && (
                   <ActionPanel.Section>
-                    <Action.CopyToClipboard
-                      title="Copy Message"
-                      content={messageContent}
-                      shortcut={Keyboard.Shortcut.Common.Copy}
-                    />
+                    <CopyMessageAction content={messageContent} />
                   </ActionPanel.Section>
                 )}
               </ActionPanel>
@@ -326,13 +325,9 @@ function PlanDetailView(props: { plan: Plan; session: Session; mutate: () => Pro
                 </ActionPanel.Section>
               )}
               <ActionPanel.Section>
-                <Action.CopyToClipboard
-                  title="Copy Step Title"
-                  content={step.title}
-                  shortcut={Keyboard.Shortcut.Common.Copy}
-                />
-                <Action.CopyToClipboard title="Copy Step Description" content={step.description || ""} />
-                <Action.CopyToClipboard title="Copy Plan as Markdown" content={planMarkdown} />
+                <CopyIdAction id={step.title} title="Copy Step Title" />
+                <CopyStepDescriptionAction content={step.description || ""} />
+                <CopyPlanMarkdownAction plan={plan} />
               </ActionPanel.Section>
             </ActionPanel>
           }
@@ -507,7 +502,7 @@ function SessionListItem(props: {
                         markdown={summary}
                         actions={
                           <ActionPanel>
-                            <Action.CopyToClipboard title="Copy Summary" content={summary} />
+                            <CopySummaryAction content={summary} />
                           </ActionPanel>
                         }
                       />,
@@ -525,18 +520,10 @@ function SessionListItem(props: {
             />
           </ActionPanel.Section>
           <ActionPanel.Section title="Copy">
-            <Action.CopyToClipboard
-              title="Copy URL"
-              content={props.session.url}
-              shortcut={Keyboard.Shortcut.Common.Copy}
-            />
-            <Action.CopyToClipboard
-              title="Copy ID"
-              content={props.session.id}
-              shortcut={Keyboard.Shortcut.Common.CopyName}
-            />
-            <Action.CopyToClipboard title="Copy Prompt" content={props.session.prompt} />
-            {prUrl && <Action.CopyToClipboard title="Copy PR URL" content={prUrl} />}
+            <CopyUrlAction url={props.session.url} />
+            <CopyIdAction id={props.session.id} />
+            <CopyPromptAction prompt={props.session.prompt} />
+            {prUrl && <CopyPrUrlAction url={prUrl} />}
           </ActionPanel.Section>
         </ActionPanel>
       }
