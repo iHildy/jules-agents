@@ -1,7 +1,7 @@
 import { getPreferenceValues } from "@raycast/api";
-import { useFetch } from "@raycast/utils";
+import { useFetch, usePromise } from "@raycast/utils";
 import { URLSearchParams } from "url";
-import { ListActivitiesResponse, ListSessionsResponse, ListSourcesResponse, Session } from "./types";
+import { ListActivitiesResponse, ListSessionsResponse, ListSourcesResponse, Session, Source } from "./types";
 
 interface ExtensionPreferences {
   julesApiKey: string;
@@ -126,27 +126,40 @@ export async function approvePlan(sessionId: string) {
 
 // --- Sources ---
 
-export function useSources(config?: { pageSize?: number }) {
-  return useFetch(
-    (options) => {
-      const params = new URLSearchParams({
-        pageSize: config?.pageSize?.toString() ?? "50",
-      });
-      if (options.cursor) {
-        params.set("pageToken", options.cursor);
-      }
-      return `${BASE_URL}/sources?${params.toString()}`;
-    },
-    {
+// --- Sources ---
+
+async function fetchAllSources() {
+  const allSources: Source[] = [];
+  let pageToken: string | undefined = undefined;
+
+  do {
+    const params = new URLSearchParams({
+      pageSize: "100",
+    });
+
+    if (pageToken) {
+      params.set("pageToken", pageToken);
+    }
+
+    const response = await fetch(`${BASE_URL}/sources?${params.toString()}`, {
       headers: getHeaders(),
-      mapResult(result: ListSourcesResponse) {
-        return {
-          data: result.sources || [],
-          hasMore: !!result.nextPageToken,
-          cursor: result.nextPageToken,
-        };
-      },
-      keepPreviousData: true,
-    },
-  );
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Failed to fetch sources: ${response.statusText} - ${errorBody}`);
+    }
+
+    const result = (await response.json()) as ListSourcesResponse;
+    if (result.sources) {
+      allSources.push(...result.sources);
+    }
+    pageToken = result.nextPageToken;
+  } while (pageToken);
+
+  return allSources;
+}
+
+export function useSources() {
+  return usePromise(fetchAllSources);
 }
