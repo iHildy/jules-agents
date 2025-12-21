@@ -8,6 +8,7 @@ interface BranchDropdownProps {
       value?: string | undefined;
       onChange?: ((value: string) => void) | undefined;
       error?: string | undefined;
+      id: string;
     };
   };
 }
@@ -15,7 +16,7 @@ interface BranchDropdownProps {
 export function BranchDropdown({ selectedSource, itemProps }: BranchDropdownProps) {
   const githubRepo = selectedSource?.githubRepo;
   const branches = githubRepo?.branches;
-  const defaultBranch = githubRepo?.defaultBranch?.name;
+  const defaultBranch = githubRepo?.defaultBranch?.displayName;
 
   if (branches && branches.length > 0) {
     return (
@@ -26,7 +27,7 @@ export function BranchDropdown({ selectedSource, itemProps }: BranchDropdownProp
         defaultValue={defaultBranch}
       >
         {branches.map((branch) => (
-          <Form.Dropdown.Item key={branch.name} value={branch.name} title={branch.displayName} />
+          <Form.Dropdown.Item key={branch.name} value={branch.displayName} title={branch.displayName} />
         ))}
       </Form.Dropdown>
     );
