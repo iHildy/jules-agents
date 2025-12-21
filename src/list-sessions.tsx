@@ -42,6 +42,221 @@ import {
 } from "./utils";
 import ViewMedia from "./view-media";
 
+interface FileChange {
+  filename: string;
+  patch: string;
+  displayPatch: string;
+  source: string;
+  commitMessage?: string;
+  gitDiffCommand?: string;
+  hunks: string[];
+}
+
+function stripDiffHeader(patch: string): { displayPatch: string; hunks: string[] } {
+  const lines = patch.split("\n");
+  const hunks: string[] = [];
+  const filtered = lines.filter((line) => {
+    if (line.startsWith("diff --git ")) return false;
+    if (line.startsWith("index ")) return false;
+    if (line.startsWith("--- ")) return false;
+    if (line.startsWith("+++ ")) return false;
+    // Extract hunk headers but don't display them in the code
+    if (line.startsWith("@@ ")) {
+      // Extract just the @@ ... @@ part
+      const hunkMatch = line.match(/^(@@ -\d+,?\d* \+\d+,?\d* @@)/);
+      if (hunkMatch) {
+        hunks.push(hunkMatch[1]);
+      }
+      return false;
+    }
+    return true;
+  });
+  return { displayPatch: filtered.join("\n").trim(), hunks };
+}
+
+function parseUnidiffToFiles(unidiffPatch: string, source: string, commitMessage?: string): FileChange[] {
+  const files: FileChange[] = [];
+  const patches = unidiffPatch.split(/(?=^diff --git)/m).filter(Boolean);
+
+  for (const patch of patches) {
+    const match = patch.match(/^diff --git a\/(.*?) b\/(.*)$/m);
+    if (match) {
+      // Parse index line for commit range: "index abc123..def456"
+      const indexMatch = patch.match(/^index ([a-f0-9]+)\.\.([a-f0-9]+)/m);
+      const gitDiffCommand = indexMatch ? `git diff ${indexMatch[1]}..${indexMatch[2]} -- ${match[2]}` : undefined;
+
+      const { displayPatch, hunks } = stripDiffHeader(patch);
+
+      files.push({
+        filename: match[2],
+        patch: patch.trim(),
+        displayPatch,
+        source,
+        commitMessage,
+        gitDiffCommand,
+        hunks,
+      });
+    }
+  }
+
+  // If no files found, treat entire patch as single file
+  if (files.length === 0 && unidiffPatch.trim()) {
+    const { displayPatch, hunks } = stripDiffHeader(unidiffPatch);
+    files.push({
+      filename: "Changes",
+      patch: unidiffPatch.trim(),
+      displayPatch,
+      source,
+      commitMessage,
+      hunks,
+    });
+  }
+
+  return files;
+}
+
+function FileDetailView(props: { file: FileChange; session: Session }) {
+  const lineCount = props.file.displayPatch.split("\n").length;
+  const hunksDisplay = props.file.hunks.length > 0 ? ` · ${props.file.hunks.join(" ")}` : "";
+  return (
+    <Detail
+      navigationTitle={props.file.filename}
+      markdown={`# ${props.file.filename} [${lineCount} lines]${hunksDisplay}\n\n\`\`\`diff\n${props.file.displayPatch}\n\`\`\``}
+      actions={
+        <ActionPanel>
+          <Action.CopyToClipboard title="Copy File Diff" content={props.file.patch} />
+          {props.file.gitDiffCommand && (
+            <Action.CopyToClipboard title="Copy Git Diff Command" content={props.file.gitDiffCommand} />
+          )}
+          <Action.OpenInBrowser url={props.session.url} title="Open Session in Browser" />
+        </ActionPanel>
+      }
+    />
+  );
+}
+
+function ApprovePrAction(props: { prUrl: string }) {
+  return (
+    <Action.CopyToClipboard
+      title="Copy Approve Command"
+      icon={{ source: Icon.CheckCircle, tintColor: Color.Green }}
+      content={`gh pr review --approve ${props.prUrl}`}
+      shortcut={{ modifiers: ["cmd", "shift"], key: "a" }}
+    />
+  );
+}
+
+function MergePrAction(props: { prUrl: string }) {
+  return (
+    <Action.CopyToClipboard
+      title="Copy Merge Command"
+      icon={{ source: Icon.ArrowRight, tintColor: Color.Purple }}
+      content={`gh pr merge --squash ${props.prUrl}`}
+    />
+  );
+}
+
+function CodeReviewPage(props: { session: Session }) {
+  const { data: activities, isLoading } = useSessionActivities(props.session.name);
+  const prUrl = props.session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
+
+  const allChanges: FileChange[] = [];
+  const seenFiles = new Set<string>();
+
+  activities?.forEach((activity) => {
+    activity.artifacts?.forEach((artifact) => {
+      if (artifact.changeSet?.gitPatch) {
+        const files = parseUnidiffToFiles(
+          artifact.changeSet.gitPatch.unidiffPatch,
+          artifact.changeSet.source,
+          artifact.changeSet.gitPatch.suggestedCommitMessage,
+        );
+        files.forEach((file) => {
+          if (!seenFiles.has(file.filename)) {
+            seenFiles.add(file.filename);
+            allChanges.push(file);
+          }
+        });
+      }
+    });
+  });
+
+  // Sort alphabetically by path (like GitHub PR review)
+  allChanges.sort((a, b) => a.filename.localeCompare(b.filename));
+
+  const fullDiff = allChanges.map((c) => c.patch).join("\n\n");
+  const commitMessage = allChanges.find((c) => c.commitMessage)?.commitMessage;
+
+  // Build markdown with all diffs
+  let markdown = "";
+  if (commitMessage) {
+    markdown += `## Suggested Commit Message\n\n${commitMessage}\n\n---\n\n`;
+  }
+  markdown += `## ${allChanges.length} Files Changed\n\n`;
+  allChanges.forEach((change) => {
+    const lineCount = change.displayPatch.split("\n").length;
+    const hunksDisplay = change.hunks.length > 0 ? ` · ${change.hunks.join(" ")}` : "";
+    markdown += `### ${change.filename} [${lineCount} lines]${hunksDisplay}\n\n\`\`\`diff\n${change.displayPatch}\n\`\`\`\n\n`;
+  });
+
+  if (isLoading) {
+    return <Detail isLoading navigationTitle={`Code Review: ${props.session.title || props.session.id}`} />;
+  }
+
+  if (allChanges.length === 0) {
+    return (
+      <Detail
+        navigationTitle={`Code Review: ${props.session.title || props.session.id}`}
+        markdown="# No Code Changes\n\nThis session has no code changes to review."
+        actions={
+          <ActionPanel>
+            <Action.OpenInBrowser url={props.session.url} title="Open Session in Browser" />
+          </ActionPanel>
+        }
+      />
+    );
+  }
+
+  return (
+    <Detail
+      navigationTitle={`Code Review: ${props.session.title || props.session.id}`}
+      markdown={markdown}
+      actions={
+        <ActionPanel>
+          <ActionPanel.Section>
+            <Action.CopyToClipboard title="Copy All Changes" content={fullDiff} />
+            {commitMessage && <Action.CopyToClipboard title="Copy Commit Message" content={commitMessage} />}
+          </ActionPanel.Section>
+          <ActionPanel.Section title={`Files (${allChanges.length})`}>
+            {allChanges.map((file, index) => (
+              <Action.Push
+                key={`${file.filename}-${index}`}
+                title={file.filename}
+                icon={Icon.Document}
+                target={<FileDetailView file={file} session={props.session} />}
+              />
+            ))}
+          </ActionPanel.Section>
+          {prUrl && (
+            <ActionPanel.Section title="Pull Request">
+              <ApprovePrAction prUrl={prUrl} />
+              <MergePrAction prUrl={prUrl} />
+              <Action.OpenInBrowser
+                icon={{ source: "git-pull-request-arrow.svg", tintColor: Color.PrimaryText }}
+                url={prUrl}
+                title="Open Pull Request"
+              />
+            </ActionPanel.Section>
+          )}
+          <ActionPanel.Section>
+            <Action.OpenInBrowser url={props.session.url} title="Open Session in Browser" />
+          </ActionPanel.Section>
+        </ActionPanel>
+      }
+    />
+  );
+}
+
 function FollowupInstruction(props: { session: Session }) {
   const { pop } = useNavigation();
   const { handleSubmit, itemProps } = useForm<{ prompt: string }>({
@@ -382,6 +597,15 @@ function SessionListItem(props: {
       detail={<SessionDetail session={props.session} />}
       actions={
         <ActionPanel>
+          {props.session.state === SessionState.COMPLETED && (
+            <ActionPanel.Section>
+              <Action.Push
+                title="View Code Review"
+                icon={Icon.Code}
+                target={<CodeReviewPage session={props.session} />}
+              />
+            </ActionPanel.Section>
+          )}
           {props.session.state === SessionState.AWAITING_PLAN_APPROVAL && (
             <ActionPanel.Section>
               <Action
@@ -471,6 +695,12 @@ function SessionListItem(props: {
                   windows: { modifiers: ["ctrl", "shift"], key: "v" },
                 } as Keyboard.Shortcut
               }
+            />
+            <Action.Push
+              icon={Icon.Code}
+              title="View Code Review"
+              target={<CodeReviewPage session={props.session} />}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
             />
             <Action.Push
               icon={Icon.Image}
