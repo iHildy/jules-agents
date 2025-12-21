@@ -18,28 +18,24 @@
     {
       "name": "launch-session",
       "title": "Launch Session",
-      "subtitle": "Jules Agents",
       "description": "Start a new session with Jules Agents.",
       "mode": "view"
     },
     {
       "name": "list-sessions",
       "title": "List Sessions",
-      "subtitle": "Jules Agents",
       "description": "Check all your sessions from anywhere.",
       "mode": "view"
     },
     {
       "name": "list-sources",
       "title": "List Sources",
-      "subtitle": "Jules Agents",
       "description": "Browse all your available sources.",
       "mode": "view"
     },
     {
       "name": "menu-bar",
       "title": "Menu Bar Overview",
-      "subtitle": "Jules Agents",
       "description": "Check all your sessions from your menu bar.",
       "mode": "menu-bar",
       "refreshInterval": 5
@@ -47,7 +43,6 @@
     {
       "name": "send-quick-message",
       "title": "Send Quick Message",
-      "subtitle": "Jules Agents",
       "description": "Send a message to a running Jules session.",
       "mode": "view"
     }
