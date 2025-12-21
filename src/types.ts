@@ -150,6 +150,7 @@ export interface GitHubRepo {
 }
 
 export interface GitHubBranch {
+  name: string;
   displayName: string;
 }
 
