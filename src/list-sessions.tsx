@@ -1,44 +1,44 @@
 import {
-  Action,
-  ActionPanel,
-  AI,
-  Color,
-  Detail,
-  Form,
-  getPreferenceValues,
-  Icon,
-  Keyboard,
-  launchCommand,
-  LaunchType,
-  List,
-  showToast,
-  Toast,
-  useNavigation,
+    Action,
+    ActionPanel,
+    AI,
+    Color,
+    Detail,
+    Form,
+    getPreferenceValues,
+    Icon,
+    Keyboard,
+    launchCommand,
+    LaunchType,
+    List,
+    showToast,
+    Toast,
+    useNavigation,
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
 import { useState } from "react";
 import {
-  CopyActivityLogAction,
-  CopyIdAction,
-  CopyMessageAction,
-  CopyPlanMarkdownAction,
-  CopyPromptAction,
-  CopyPrUrlAction,
-  CopyStepDescriptionAction,
-  CopySummaryAction,
-  CopyUrlAction,
+    CopyActivityLogAction,
+    CopyIdAction,
+    CopyMessageAction,
+    CopyPlanMarkdownAction,
+    CopyPromptAction,
+    CopyPrUrlAction,
+    CopyStepDescriptionAction,
+    CopySummaryAction,
+    CopyUrlAction,
 } from "./components/CopyActions";
 import { approvePlan, fetchSessionActivities, sendMessage, useSessionActivities, useSessions } from "./jules";
 import { Activity, Plan, Preferences, Session, SessionState } from "./types";
 import {
-  formatBashOutputMarkdown,
-  formatRepoName,
-  formatSessionState,
-  formatSessionTitle,
-  getSessionAccessories,
-  getStatusIconForSession,
-  groupSessions,
+    formatBashOutputMarkdown,
+    formatRepoName,
+    formatSessionState,
+    formatSessionTitle,
+    getSessionAccessories,
+    getStatusIconForSession,
+    groupSessions,
 } from "./utils";
 import ViewMedia from "./view-media";
 
@@ -842,6 +842,20 @@ export default function Command() {
         </ActionPanel>
       }
     >
+      <List.EmptyView
+        title="No Sessions Found"
+        description="Try changing your filters or launch a new session."
+        icon={Icon.EyeDisabled}
+        actions={
+          <ActionPanel>
+            <Action
+              title="Launch Session"
+              icon={Icon.PlusCircle}
+              onAction={() => launchCommand({ name: "launch-session", type: LaunchType.UserInitiated })}
+            />
+          </ActionPanel>
+        }
+      />
       <List.Section title="Today">
         {today.map((session) => (
           <SessionListItem
