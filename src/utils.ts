@@ -239,3 +239,76 @@ ${bashOutput.output}
 
   return markdown;
 }
+
+export interface FileChange {
+  filename: string;
+  patch: string;
+  displayPatch: string;
+  source: string;
+  commitMessage?: string;
+  gitDiffCommand?: string;
+  hunks: string[];
+}
+
+export function stripDiffHeader(patch: string): { displayPatch: string; hunks: string[] } {
+  const lines = patch.split("\n");
+  const hunks: string[] = [];
+  const filtered = lines.filter((line) => {
+    if (line.startsWith("diff --git ")) return false;
+    if (line.startsWith("index ")) return false;
+    if (line.startsWith("--- ")) return false;
+    if (line.startsWith("+++ ")) return false;
+    // Extract hunk headers but don't display them in the code
+    if (line.startsWith("@@ ")) {
+      // Extract just the @@ ... @@ part
+      const hunkMatch = line.match(/^(@@ -\d+,?\d* \+\d+,?\d* @@)/);
+      if (hunkMatch) {
+        hunks.push(hunkMatch[1]);
+      }
+      return false;
+    }
+    return true;
+  });
+  return { displayPatch: filtered.join("\n").trim(), hunks };
+}
+
+export function parseUnidiffToFiles(unidiffPatch: string, source: string, commitMessage?: string): FileChange[] {
+  const files: FileChange[] = [];
+  const patches = unidiffPatch.split(/(?=^diff --git)/m).filter(Boolean);
+
+  for (const patch of patches) {
+    const match = patch.match(/^diff --git a\/(.*?) b\/(.*)$/m);
+    if (match) {
+      // Parse index line for commit range: "index abc123..def456"
+      const indexMatch = patch.match(/^index ([a-f0-9]+)\.\.([a-f0-9]+)/m);
+      const gitDiffCommand = indexMatch ? `git diff ${indexMatch[1]}..${indexMatch[2]} -- ${match[2]}` : undefined;
+
+      const { displayPatch, hunks } = stripDiffHeader(patch);
+
+      files.push({
+        filename: match[2],
+        patch: patch.trim(),
+        displayPatch,
+        source,
+        commitMessage,
+        gitDiffCommand,
+        hunks,
+      });
+    }
+  }
+
+  // If no files found, treat entire patch as single file
+  if (files.length === 0 && unidiffPatch.trim()) {
+    const { displayPatch, hunks } = stripDiffHeader(unidiffPatch);
+    files.push({
+      filename: "Changes",
+      patch: unidiffPatch.trim(),
+      displayPatch,
+      source,
+      commitMessage,
+      hunks,
+    });
+  }
+
+  return files;
+}
