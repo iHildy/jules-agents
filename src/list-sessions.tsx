@@ -15,7 +15,7 @@ import {
 } from "@raycast/api";
 import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { format } from "date-fns";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   CopyActivityLogAction,
   CopyIdAction,
