@@ -55,13 +55,6 @@ function SessionMenuBarItem({ session, planSteps }: { session: Session; planStep
 
   const prUrl = session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
 
-  const runningStates = [
-    SessionState.PLANNING,
-    SessionState.AWAITING_PLAN_APPROVAL,
-    SessionState.IN_PROGRESS,
-    SessionState.AWAITING_USER_FEEDBACK,
-  ];
-
   return (
     <>
       <MenuBarExtra.Submenu
@@ -118,23 +111,6 @@ function SessionMenuBarItem({ session, planSteps }: { session: Session; planStep
                   await Clipboard.copy(prUrl);
                   await showHUD("Copied PR URL to clipboard");
                   break;
-              }
-            }}
-          />
-        )}
-        {runningStates.includes(session.state) && (
-          <MenuBarExtra.Item
-            title="Send Quick Message"
-            icon={Icon.SpeechBubble}
-            onAction={async () => {
-              try {
-                await launchCommand({
-                  name: "send-quick-message",
-                  type: LaunchType.UserInitiated,
-                  context: { session },
-                });
-              } catch (e) {
-                await showFailureToast(e, { title: "Failed to open quick message form" });
               }
             }}
           />
