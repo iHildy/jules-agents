@@ -13,6 +13,7 @@ import {
 } from "@raycast/api";
 import { showFailureToast } from "@raycast/utils";
 import { useEffect, useState } from "react";
+import { getLastActivity } from "./hooks";
 import { approvePlan, fetchSessionActivities, useSessions } from "./jules";
 import { useSessionNotifications } from "./notification";
 import { Session, SessionState } from "./types";
@@ -33,10 +34,10 @@ function SessionMenuBarItemWithPlanSteps({ session }: { session: Session }) {
       if (session.state === SessionState.PLANNING || session.state === SessionState.AWAITING_PLAN_APPROVAL) {
         try {
           const activities = await fetchSessionActivities(session.name);
-          const sortedActivities = activities.sort(
-            (a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime(),
-          );
-          const planActivity = sortedActivities.find((a) => a.planGenerated);
+          const lastActivity = getLastActivity(activities);
+          const planActivity = lastActivity?.planGenerated
+            ? lastActivity
+            : activities.reverse().find((a) => a.planGenerated);
           setPlanSteps(planActivity?.planGenerated?.plan?.steps?.length);
         } catch (e) {
           // Silently fail, we don't want to show toasts from the menu bar item

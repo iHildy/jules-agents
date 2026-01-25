@@ -28,6 +28,7 @@ import {
   CopyUrlAction,
 } from "./components/CopyActions";
 import QuickMessageForm from "./components/QuickMessageForm";
+import { useLastActivity } from "./hooks";
 import {
   approvePlan,
   fetchSessionActivities,
@@ -167,12 +168,7 @@ function CodeReviewPage(props: { session: Session }) {
   const { data: activities, isLoading, revalidate } = useSessionActivities(props.session.name);
   const prUrl = props.session.outputs?.find((o) => o.pullRequest)?.pullRequest?.url;
 
-  const lastActivity = useMemo(() => {
-    const sorted = [...(activities || [])].sort(
-      (a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime(),
-    );
-    return sorted[0];
-  }, [activities]);
+  const lastActivity = useLastActivity(activities);
 
   const allChanges: FileChange[] = [];
   const seenFiles = new Set<string>();
@@ -287,17 +283,12 @@ function CodeReviewPage(props: { session: Session }) {
   );
 }
 
-function FollowupInstruction(props: { session: Session }) {
+function FollowupInstruction(props: { session: Session; onMessageSent?: () => void }) {
   const { data: activities } = useSessionActivities(props.session.name);
 
-  const lastActivity = useMemo(() => {
-    const sorted = [...(activities || [])].sort(
-      (a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime(),
-    );
-    return sorted[0];
-  }, [activities]);
+  const lastActivity = useLastActivity(activities);
 
-  return <QuickMessageForm session={props.session} lastActivity={lastActivity} />;
+  return <QuickMessageForm session={props.session} lastActivity={lastActivity} onMessageSent={props.onMessageSent} />;
 }
 
 function ApprovePlanAction(props: { session: Session; onApproved?: () => void }) {
@@ -561,7 +552,7 @@ function SessionListItem(props: {
             <Action.Push
               icon={Icon.SpeechBubble}
               title="Send Message"
-              target={<FollowupInstruction session={props.session} />}
+              target={<FollowupInstruction session={props.session} onMessageSent={props.mutate} />}
               shortcut={
                 {
                   macOS: { modifiers: ["cmd", "shift"], key: "n" },
