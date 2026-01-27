@@ -175,7 +175,7 @@ function CodeReviewPage(props: { session: Session }) {
 
   activities?.forEach((activity) => {
     activity.artifacts?.forEach((artifact) => {
-      if (artifact.changeSet?.gitPatch) {
+      if (artifact.changeSet?.gitPatch?.unidiffPatch) {
         const files = parseUnidiffToFiles(
           artifact.changeSet.gitPatch.unidiffPatch,
           artifact.changeSet.source,
