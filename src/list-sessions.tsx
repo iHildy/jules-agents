@@ -217,7 +217,9 @@ function CodeReviewPage(props: { session: Session }) {
     return (
       <Detail
         navigationTitle={`Code Review: ${props.session.title || props.session.id}`}
-        markdown="# No Code Changes\n\nThis session has no code changes to review."
+        markdown={`# No Code Changes
+
+This session has no code changes to review.`}
         actions={
           <ActionPanel>
             <Action.Push
