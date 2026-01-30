@@ -101,7 +101,7 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
     <Form
       actions={
         <ActionPanel>
-          <Action.SubmitForm title="Submit Task" onSubmit={handleSubmit} />
+          <Action.SubmitForm title="Submit Task" icon={Icon.CheckCircle} onSubmit={handleSubmit} />
           <Action
             title="Improve Prompt"
             icon={Icon.Wand}
