@@ -2,7 +2,7 @@ export interface Session {
   name?: string;
   id: string;
   prompt: string;
-  sourceContext: SourceContext;
+  sourceContext?: SourceContext;
   title?: string;
   requirePlanApproval?: boolean;
   automationMode?: AutomationMode;
