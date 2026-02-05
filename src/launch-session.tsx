@@ -10,7 +10,7 @@ import {
   showToast,
   Toast,
 } from "@raycast/api";
-import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
+import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { useState } from "react";
 import { BranchDropdown } from "./components/BranchDropdown";
 import { SourceDropdown } from "./components/SourceDropdown";
@@ -33,7 +33,8 @@ interface LaunchContext {
 export default function Command(props: LaunchProps<{ launchContext?: LaunchContext }>) {
   const preferences = getPreferenceValues<Preferences>();
   const { data: sources, isLoading: isLoadingSources } = useSources();
-  const initialSource = props.launchContext?.source;
+  const [lastUsedSource, setLastUsedSource] = useCachedState<string>("lastUsedSource", "NO_REPO");
+  const initialSource = props.launchContext?.source || lastUsedSource;
   const [selectedSource, setSelectedSource] = useState<Source | undefined>(undefined);
 
   const { reset, focus, handleSubmit, itemProps, setValue } = useForm<Values>({
@@ -80,6 +81,11 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         });
 
         await refreshMenuBar();
+
+        // Save the source for next time (if not NO_REPO)
+        if (values.sourceId !== "NO_REPO") {
+          setLastUsedSource(values.sourceId);
+        }
 
         reset();
         focus("prompt");
@@ -157,8 +163,7 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         value={itemProps.sourceId.value}
       />
 
-      {selectedSource && (<BranchDropdown selectedSource={selectedSource} itemProps={itemProps} />
-      )}
+      {selectedSource && <BranchDropdown selectedSource={selectedSource} itemProps={itemProps} />}
 
       <Form.Separator />
 
