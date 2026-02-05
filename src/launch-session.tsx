@@ -82,10 +82,8 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
 
         await refreshMenuBar();
 
-        // Save the source for next time (if not NO_REPO)
-        if (values.sourceId !== NO_REPO) {
-          setLastUsedSource(values.sourceId);
-        }
+        // Save the source for next time
+        setLastUsedSource(values.sourceId);
 
         reset();
         focus("prompt");
