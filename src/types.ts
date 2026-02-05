@@ -169,3 +169,6 @@ export interface ListSourcesResponse {
   sources: Source[];
   nextPageToken?: string;
 }
+
+// Constants
+export const NO_REPO = "NO_REPO";

@@ -10,12 +10,12 @@ import {
   showToast,
   Toast,
 } from "@raycast/api";
-import { FormValidation, showFailureToast, useForm } from "@raycast/utils";
+import { FormValidation, showFailureToast, useCachedState, useForm } from "@raycast/utils";
 import { useState } from "react";
 import { BranchDropdown } from "./components/BranchDropdown";
 import { SourceDropdown } from "./components/SourceDropdown";
 import { createSession, useSources } from "./jules";
-import { AutomationMode, Source } from "./types";
+import { AutomationMode, NO_REPO, Source } from "./types";
 import { refreshMenuBar } from "./utils";
 
 type Values = {
@@ -33,7 +33,8 @@ interface LaunchContext {
 export default function Command(props: LaunchProps<{ launchContext?: LaunchContext }>) {
   const preferences = getPreferenceValues<Preferences>();
   const { data: sources, isLoading: isLoadingSources } = useSources();
-  const initialSource = props.launchContext?.source;
+  const [lastUsedSource, setLastUsedSource] = useCachedState<string>("lastUsedSource", NO_REPO);
+  const initialSource = props.launchContext?.source || lastUsedSource;
   const [selectedSource, setSelectedSource] = useState<Source | undefined>(undefined);
 
   const { reset, focus, handleSubmit, itemProps, setValue } = useForm<Values>({
@@ -54,7 +55,7 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         let startingBranch = values.startingBranch;
         let sourceContext = undefined;
 
-        if (values.sourceId !== "NO_REPO") {
+        if (values.sourceId !== NO_REPO) {
           if (!startingBranch) {
             const selectedSource = sources?.find((s) => s.name === values.sourceId);
             // ... logic to find default branch
@@ -72,7 +73,7 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
 
         const response = await createSession({
           prompt: values.prompt,
-          sourceContext: sourceContext,
+          sourceContext,
           requirePlanApproval: values.requirePlanApproval,
           automationMode: values.autoCreatePR
             ? AutomationMode.AUTO_CREATE_PR
@@ -80,6 +81,9 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         });
 
         await refreshMenuBar();
+
+        // Save the source for next time
+        setLastUsedSource(values.sourceId);
 
         reset();
         focus("prompt");
@@ -147,7 +151,7 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
           itemProps.sourceId.onChange?.(value);
           const source = sources?.find((s) => s.name === value);
           setSelectedSource(source);
-          if (value === "NO_REPO") {
+          if (value === NO_REPO) {
             // Clear or handle no repo specific logic if needed
             setValue("startingBranch", "");
           } else if (source?.githubRepo?.defaultBranch?.displayName) {
@@ -157,8 +161,7 @@ export default function Command(props: LaunchProps<{ launchContext?: LaunchConte
         value={itemProps.sourceId.value}
       />
 
-      {selectedSource && (<BranchDropdown selectedSource={selectedSource} itemProps={itemProps} />
-      )}
+      {selectedSource && <BranchDropdown selectedSource={selectedSource} itemProps={itemProps} />}
 
       <Form.Separator />
 
