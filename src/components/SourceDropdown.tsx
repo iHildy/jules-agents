@@ -28,13 +28,14 @@ export function SourceDropdown({ onSelectionChange, value }: SourceDropdownProps
       value={value}
       onChange={onSelectionChange}
     >
+      <Form.Dropdown.Item value="NO_REPO" title="No Repository" />
       {sources && sources.length > 0 ? (
         sources.map((source) => (
           <Form.Dropdown.Item
             key={source.id}
             value={source.name} // Using resource name as the ID/value
             title={getSourceLabel(source)}
-            // icon={source.githubRepo ? "github-logo.png" : Icon.Globe} // Removed icon to avoid needing Icon import or asset for now
+          // icon={source.githubRepo ? "github-logo.png" : Icon.Globe} // Removed icon to avoid needing Icon import or asset for now
           />
         ))
       ) : (
